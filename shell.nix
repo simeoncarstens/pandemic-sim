@@ -14,5 +14,5 @@ let
   };
 in
   mkShell {
-    buildInputs = [ celluloid numpy matplotlib ];
+    buildInputs = [ celluloid numpy matplotlib ffmpeg ];
   }
