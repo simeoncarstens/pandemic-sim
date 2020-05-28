@@ -1,3 +1,6 @@
+<!--- [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/simeoncarstens/pandemic-sim/master) --->
+<!--- [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/truatpasteurdotfr/pandemic-sim/master) --->
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/truatpasteurdotfr/pandemic-sim/master?filepath=simulation.ipynb)
 # pandemic-sim
 Boredom and curiosity hit and I programmed a little pandemic simulator. It is heavily inspired by (one could also say, ripped off from) this one here: https://www.washingtonpost.com/graphics/2020/world/corona-simulator/ 
 It works as follows: people wander around in a room and upon contact can infect each other. Adjustable features are:
