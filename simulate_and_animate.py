@@ -1,7 +1,8 @@
 import numpy as np
 
 from pandemic_sim.simulation import Person, Simulation, Room
-from pandemic_sim.visualization import CelluloidAnimator
+from pandemic_sim.visualizations import DefaultVisualization
+from pandemic_sim.animators import CelluloidAnimator
 
 
 ## Initialize simulation
@@ -25,8 +26,9 @@ sim = Simulation(room, persons, lambda d:  d < 1,
                  transmit_cutoff=3,
                  force_constant=20,
                  time_to_heal=day_unit * 14)
-sim_result = sim.run(50 * day_unit)
+n_steps = 50 * day_unit
+sim_result = sim.run(n_steps)
 
-animator = CelluloidAnimator(**sim_result, radius=sim.cutoff / 2,
-                             room=room)
-animator.animate()
+viz = DefaultVisualization(sim_result, room, sim.cutoff / 2)
+animator = CelluloidAnimator(viz)
+animator.animate(n_steps)
