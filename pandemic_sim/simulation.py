@@ -1,9 +1,6 @@
 import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-from celluloid import Camera
 
+np.random.seed(42)
 
 class Person(object):
     def __init__(self, pos, vel, in_prob, out_prob, death_prob, infected=False,
@@ -90,8 +87,8 @@ class Simulation(object):
         self.force_constant = force_constant
         poss = np.array([p.pos for p in self.persons])
         self._oldgrad = self.gradient(poss)
-        self._current_step = 0
         self.time_to_heal = time_to_heal
+        self._current_step = 0
         
     
     def _maybe_transmit(self, p1, p2, d):
@@ -267,127 +264,38 @@ class Simulation(object):
         self._current_step += 1
                     
 
+    def run(self, n_steps):
+        all_positions = [np.array([p.pos for p in self.persons])]
+        all_infected = [np.array([True if p.infected else False
+                                  for i, p in enumerate(self.persons)])]
+        all_immune = [np.array([p.immune for p in self.persons])]
+        all_fatalities = [np.array([p.dead for p in self.persons])]
 
-def plot_infected(step, poss, all_infected, sim, main_ax, count_ax):
-    current = all_infected[step]
-    inf_circles = [plt.Circle(pos, radius=sim.cutoff / 2, linewidth=0)
-                   for pos in poss[current]]
-    inf_c = matplotlib.collections.PatchCollection(inf_circles, color="orange")
-    main_ax.add_collection(inf_c)
-    count_ax.plot(np.sum(all_infected[:step + 1], axis=1), color='black')
-    count_ax.set_xlabel('time')
-    count_ax.set_ylabel('# infected')
+        for i in range(n_steps):
+            if i % 50 == 0:
+                print(f"Simulating step {i}/{n_steps}...")
+            self.step()
 
+            ## keep track of all positions, infection status, immunity
+            ## status and dead persons
+            poss = np.array([p.pos for p in self.persons])
+            all_positions.append(poss)
+            infected = np.array([p.infected for p in self.persons])
+            all_infected.append(infected)
+            immune = np.array([p.immune for p in self.persons])
+            all_immune.append(immune)
+            fatalities = np.array([p.dead for p in self.persons])
+            all_fatalities.append(fatalities)
 
-def plot_notinfected(step, poss, all_infected, sim, main_ax):
-    current = ~all_infected[step]
-    not_inf_circles = [plt.Circle(pos, radius=sim.cutoff / 2, linewidth=0)
-                       for pos in poss[current]]
-    not_inf_c = matplotlib.collections.PatchCollection(not_inf_circles, color="blue")
-    main_ax.add_collection(not_inf_c)
-    
+        all_positions = np.array(all_positions)
+        all_infected = np.array(all_infected)
+        all_immune = np.array(all_immune)
+        all_fatalities = np.array(all_fatalities)
+        all_healthy = ~all_infected & ~all_fatalities
 
-def plot_dead(step, poss, all_fatalities, sim, main_ax, count_ax):
-    current = all_fatalities[step]
-    dead_circles = [plt.Circle(pos, radius=sim.cutoff / 2, linewidth=1)
-                    for pos in poss[current]]
-    dead_c = matplotlib.collections.PatchCollection(dead_circles, color="lightgray")
-    main_ax.add_collection(dead_c)
-    count_ax.plot(np.sum(all_fatalities[:step + 1], axis=1), color='black')
-    count_ax.set_xlabel('time')
-    count_ax.set_ylabel('# fatalities')
+        print("Done.")
+        
+        return {'all_positions': all_positions, 'all_healthy': all_healthy,
+                'all_infected': all_infected, 'all_immune': all_immune,
+                'all_fatalities': all_fatalities}
 
-
-def plot_immune(step, all_immune, immune_ax):
-    immune_ax.plot(np.sum(all_immune[:step + 1], axis=1), color='black')
-    immune_ax.set_xlabel('time')
-    immune_ax.set_ylabel('# immune')
-
-
-def setup_axes(fig, room, n_steps, n_persons):
-    gs = gridspec.GridSpec(3, 4)
-    
-    main_ax = fig.add_subplot(gs[:,:3])
-    main_ax.set_xlim((0, room.w))
-    main_ax.set_ylim((0, room.h))
-    main_ax.set_aspect('equal')
-    main_ax.set_xticks(())
-    main_ax.set_yticks(())
-
-    inf_ax = fig.add_subplot(gs[0,3])
-    inf_ax.set_xlim((0, n_steps))
-    inf_ax.set_ylim((0, n_persons))
-
-    immune_ax = fig.add_subplot(gs[1,3])
-    immune_ax.set_xlim((0, n_steps))
-    immune_ax.set_ylim((0, n_persons))
-
-    fatalities_ax = fig.add_subplot(gs[2,3])
-    fatalities_ax.set_xlim((0, n_steps))
-    fatalities_ax.set_ylim((0, n_persons))
-
-    return main_ax, inf_ax, immune_ax, fatalities_ax
-
-
-## Initialize simulation
-n_persons = 500
-room = Room(80, 80)
-# persons start with random positions and velocities
-persons = [Person(np.random.uniform(low=(0,0), high=(room.w, room.h)),
-                  np.random.uniform(low=(-2, -2), high=(2, 2), size=2),
-                  1., 1., 0.01, False)
-           for _ in range(n_persons)]
-# some persons actually start out being infected
-chosen_ones = np.random.choice(np.arange(n_persons), n_persons // 50)
-for i in chosen_ones:
-    persons[i].infected = True
-sim = Simulation(room, persons, lambda d:  d < 1,
-                 dt=0.1,
-                 cutoff=1,
-                 transmit_cutoff=2,
-                 force_constant=20,
-                 time_to_heal=40)
-
-## Run simulation
-n_steps = 300
-all_positions = [np.array([p.pos for p in sim.persons])]
-all_infected = [np.array([True if p.infected else False
-                          for i, p in enumerate(sim.persons)])]
-all_immune = [np.array([p.immune for p in sim.persons])]
-all_fatalities = [np.array([p.dead for p in sim.persons])]
-
-for i in range(n_steps):
-    if i % 50 == 0:
-        print(f"Simulating step {i}/{n_steps}...")
-    sim.step()
-
-    ## keep track of all positions, infection status, immunity
-    ## status and dead persons
-    poss = np.array([p.pos for p in sim.persons])
-    all_positions.append(poss)
-    infected = np.array([p.infected for p in sim.persons])
-    all_infected.append(infected)
-    immune = np.array([p.immune for p in sim.persons])
-    all_immune.append(immune)
-    fatalities = np.array([p.dead for p in sim.persons])
-    all_fatalities.append(fatalities)
-
-
-## Animate everything
-fig = plt.figure()
-camera = Camera(fig)
-main_ax, inf_ax, immune_ax, fatalities_ax = setup_axes(fig, room,
-                                                       n_steps, n_persons)
-for step, poss in enumerate(all_positions):
-    if step % 50 == 0:
-        print(f"Animating step {step}/{n_steps}...")
-    plot_infected(step, poss, all_infected, sim, main_ax, inf_ax)
-    plot_notinfected(step, poss, all_infected, sim, main_ax)
-    plot_dead(step, poss, all_fatalities, sim, main_ax, fatalities_ax)
-    plot_immune(step, all_immune, immune_ax)
-
-    fig.tight_layout()
-    camera.snap()
-
-anim = camera.animate(blit=True)
-anim.save("output.mp4", fps=10)
