@@ -293,6 +293,8 @@ class Simulation(object):
         all_fatalities = np.array(all_fatalities)
         all_healthy = ~all_infected & ~all_fatalities
 
+        print("Done.")
+        
         return {'all_positions': all_positions, 'all_healthy': all_healthy,
                 'all_infected': all_infected, 'all_immune': all_immune,
                 'all_fatalities': all_fatalities}

@@ -28,6 +28,7 @@ class CelluloidAnimator(Animator):
                 print(f"Animating step {step}/{n_steps}...")
             self._visualization.visualize_single_step(step)
             camera.snap()
-
         anim = camera.animate(blit=True)
         anim.save(self._out, fps=self._frame_rate)
+
+        print("Done.")
