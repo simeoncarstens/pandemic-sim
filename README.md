@@ -9,7 +9,13 @@ It works as follows: people wander around in a room and upon contact can infect 
 - base probability for infection depending on distance between persons
 - time it takes for people to become healthy again after infection
 - probability of a person to die in a certain time step, given they are infected
-- people fancily bounce off each other and off walls, courtesy of numerical solution of equations of motions and repulsive force between people, whose parameters can be set
+- people fancily bounce off each other and off walls, courtesy of numerical solution of equations of motions and repulsive force between people, whose parameters can be set (to emulate, say, physical distancing)
+
+Here's how that looks like:
+
+![Oh, the simulated horror...](http://simeon-carstens.com/files/sim_example2.png)
+
+Blue dots are healthy people, orange dots are infected people and gray dots are fatalities.
 
 ## Requirements
 You'll need Python 3.6 or greater, `matplotlib` and `numpy`. The most current `matplotlib` version (3.2.1) has a bug which might prevent the rendering result from being saved, so you want to have an older version. You also need `ffmpeg`. You can install all necessary Python packages (including a compatible `matplotlib` version) by running
