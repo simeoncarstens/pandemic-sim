@@ -1,10 +1,9 @@
-<!--- [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/simeoncarstens/pandemic-sim/master) --->
-<!--- [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/truatpasteurdotfr/pandemic-sim/master) --->
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/truatpasteurdotfr/pandemic-sim/master?filepath=simulation.ipynb)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/simeoncarstens/pandemic-sim/master?filepath=simulation.ipynb)
 # pandemic-sim
-Boredom and curiosity hit and I programmed a little pandemic simulator. It is heavily inspired by (one could also say, ripped off from) this one here: https://www.washingtonpost.com/graphics/2020/world/corona-simulator/ 
-It works as follows: people wander around in a room and upon contact can infect each other. Adjustable features are:
+Boredom and curiosity hit and I programmed a little pandemic simulator. It is heavily inspired by (one could also say, ripped off from) this one here: https://www.washingtonpost.com/graphics/2020/world/corona-simulator/  
+It works as follows: people wander around in a room and upon contact can infect each other. Adjustable settings are:
 
+- number of people
 - probability to catch the disease
 - probability to spread the disease
 - base probability for infection depending on distance between persons
@@ -18,6 +17,11 @@ You'll need Python 3.6 or greater, `matplotlib` and `numpy`. The most current `m
 $ pip install -r requirements.txt
 ```
 If you're using [Nix](https://nixos.org) or you'd like to try it out (and you should!), you can just use the provided `shell.nix` to get an environment with all necessary dependencies, `ffmpeg` included.
+
+## Special thanks
+...to
+
+- [Tru Huynh](https://github.com/truatpasteurdotfr) for the Binder setup
 
 ## Warning
 This is just a toy. I'm not an epidemiologist, you're probably neither, so don't use results of this simulation for anything other than superficial illustration purposes.
