@@ -17,8 +17,10 @@ Here's how that looks like:
 
 Blue dots are healthy people, orange dots are infected people and gray dots are fatalities.
 
+You can easily try it out yourself by clicking on the Binder button at the top of this readme file! It will launch an interactive Jupyter notebook, in which parameters are explained. You can change them to your liking and check the result, all without installing anything on your machine.
+
 ## Requirements
-You'll need Python 3.6 or greater, `matplotlib` and `numpy`. The most current `matplotlib` version (3.2.1) has a bug which might prevent the rendering result from being saved, so you want to have an older version. You also need `ffmpeg`. You can install all necessary Python packages (including a compatible `matplotlib` version) by running
+If you want to run this code locally, you'll need Python 3.6 or greater, `matplotlib` and `numpy`. The most current `matplotlib` version (3.2.1) has a bug which might prevent the rendering result from being saved, so you want to have an older version. You also need `ffmpeg`. You can install all necessary Python packages (including a compatible `matplotlib` version) by running
 ```
 $ pip install -r requirements.txt
 ```
