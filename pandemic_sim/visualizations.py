@@ -2,6 +2,7 @@ from abc import abstractmethod
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
 
 class Visualization:
@@ -145,3 +146,26 @@ class DefaultVisualization(Visualization):
         self.figure.tight_layout()
 
 
+class BonusVisualization(DefaultVisualization):
+    UBUNTU_IMAGE = plt.imread("bonus/ubuntu_small.png")
+    NIXOS_IMAGE = plt.imread("bonus/nixos.png")
+
+    @staticmethod
+    def plot_images(x, y, image, ax=None):
+        """https://stackoverflow.com/a/60193751"""
+        ax = ax or plt.gca()
+        for xi, yi in zip(x,y):
+            im = OffsetImage(image, zoom=30/ax.figure.dpi)
+            im.image.axes = ax
+            ab = AnnotationBbox(im, (xi,yi), frameon=False, pad=0.0,)
+            ax.add_artist(ab)
+
+    
+    def _plot_infected(self, currently_infected):
+        self.plot_images(currently_infected[:,0], currently_infected[:,1],
+                         self.NIXOS_IMAGE, self._main_ax)
+        
+
+    def _plot_healthy(self, currently_healthy):
+        self.plot_images(currently_healthy[:,0], currently_healthy[:,1],
+                         self.UBUNTU_IMAGE, self._main_ax)
