@@ -134,8 +134,9 @@ class Simulation(object):
                 if dm[i,j] < self.transmit_cutoff:
                     self._maybe_transmit(self.persons[i], self.persons[j], dm[i,j])
                 if dm[i,j] < self.cutoff:
-                    res[i] += pos1 - pos2
-                    res[j] -= pos1 - pos2
+                    f = (self.cutoff - dm[i,j]) / dm[i,j] * (pos1 - pos2)
+                    res[i] += f
+                    res[j] -= f
                     
         return self.force_constant * res
                 
@@ -286,7 +287,7 @@ class Simulation(object):
             all_immune.append(immune)
             fatalities = np.array([p.dead for p in self.persons])
             all_fatalities.append(fatalities)
-
+            
         all_positions = np.array(all_positions)
         all_infected = np.array(all_infected)
         all_immune = np.array(all_immune)
