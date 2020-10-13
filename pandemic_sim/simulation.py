@@ -210,8 +210,6 @@ class Simulation(object):
         self._oldgrad = new_grad
 
         for i, (pos, vel) in enumerate(zip(new_poss, new_vels)):
-            if self.persons[i].dead:
-                continue
             self.persons[i].pos = pos
             self.persons[i].vel = vel
         
@@ -223,10 +221,7 @@ class Simulation(object):
         self._move_persons()
 
         for p in self.persons:
-            if p.dead:
-                ## some bug somewhere necessitates to do this again
-                p.vel[:] = 0.0
-            elif p.infected:
+            if p.infected:
                 if p.infected_since is None:
                     p.infected_since = self._current_step
                 elif self._current_step - p.infected_since >= self.time_to_heal:
