@@ -58,8 +58,8 @@ class DefaultVisualization(Visualization):
         gs = gridspec.GridSpec(3, 4)
 
         main_ax = self._figure.add_subplot(gs[:,:3])
-        main_ax.set_xlim((0, self._room.w + self._radius))
-        main_ax.set_ylim((0, self._room.h + self._radius))
+        main_ax.set_xlim((0, self._room.width + self._radius))
+        main_ax.set_ylim((0, self._room.height + self._radius))
         main_ax.set_aspect('equal')
         main_ax.set_xticks(())
         main_ax.set_yticks(())

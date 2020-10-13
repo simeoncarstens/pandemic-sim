@@ -9,7 +9,7 @@ from pandemic_sim.animators import CelluloidAnimator
 n_persons = 500
 room = Room(40, 40)
 # persons start with random positions and velocities
-persons = [Person(np.random.uniform(low=(0,0), high=(room.w, room.h)),
+persons = [Person(np.random.uniform(low=(0,0), high=(room.width, room.height)),
                   np.random.uniform(low=(-2, -2), high=(2, 2), size=2),
                   0.2, 0.2, 0.00015, False)
            for _ in range(n_persons)]
@@ -25,6 +25,7 @@ sim = Simulation(room, persons, lambda d:  d < 1,
                  cutoff=0.75,
                  transmit_cutoff=3,
                  force_constant=20,
+                 wall_force_constant=20.0,
                  time_to_heal=day_unit * 14)
 n_steps = 50 * day_unit
 sim_result = sim.run(n_steps)

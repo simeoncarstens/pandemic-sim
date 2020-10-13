@@ -48,14 +48,14 @@ class Person(object):
 
         
 class Room(object):
-    def __init__(self, w, h):
-        self.w = w
-        self.h = h
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
 
 
 class Simulation(object):
     def __init__(self, room, persons, prob_dist, dt, cutoff, transmit_cutoff,
-                 force_constant, time_to_heal):
+                 force_constant, wall_force_constant, time_to_heal):
         """
         Arguments:
         
@@ -72,9 +72,14 @@ class Simulation(object):
         - transmit_cutoff (float): Cutoff distance between two persons above
                                    which no transmission can happen
         - force_constant (float): Force constant determining strength of 
-                                  interaction potential between two persons.
+                                  the interaction potential between two persons.
                                   The higher it is, the more persons bounce
                                   off each other.
+        - wall_force_constant (float): Force constant determining strength of 
+                                       the interaction potential between a 
+                                       person and the walls
+                                       The higher it is, the stronger a person
+                                       bounces off a wall.
         - time_to_heal (int): Number of time steps it takes for a person to
                               become healthy again after they've been infected
         """
@@ -85,8 +90,9 @@ class Simulation(object):
         self.cutoff = cutoff
         self.transmit_cutoff = transmit_cutoff
         self.force_constant = force_constant
+        self.wall_force_constant = wall_force_constant
         poss = np.array([p.pos for p in self.persons])
-        self._oldgrad = self.gradient(poss)
+        self._oldgrad = self.inter_person_gradient(poss) + self.wall_gradient(poss)
         self.time_to_heal = time_to_heal
         self._current_step = 0
         
@@ -111,7 +117,7 @@ class Simulation(object):
                 p1.infected = np.random.random() < total_prob
 
 
-    def gradient(self, pos):
+    def inter_person_gradient(self, pos):
         """
         Gradient of potential energy responsable for making persons
         bounce off each other. Includes call to _maybe_transmit
@@ -139,65 +145,35 @@ class Simulation(object):
                     res[j] -= f
                     
         return self.force_constant * res
-                
 
-    def _bounce_off_walls(self, new_poss, old_poss, new_vels, old_vels, new_grad):
+
+    def wall_gradient(self, pos):
         """
-        Corrects positions and velocities of persons who exceed the room limits
-        
+        Gradient representing the repulsive forces the walls exert on
+        persons.
+
         Arguments:
 
-        - new_poss (np.ndarray): 2D numpy array of updated position vectors
-        - old_poss (np.ndarray): 2D numpy array of old position vectors
-        - new_vels (np.ndarray): 2D numpy array of updated velocity vectors
-        - old_vels (np.ndarray): 2D numpy array of old velocity vectors
-        - new_grad (np.ndarray): updated gradient vector (equivalent to 
-                                 acceleration of persons)
-
-        Returns:
-
-        - (new_poss, new_vels, new_grad): corrected positions, velocities,
-                                          and gradient
+        - pos (np.ndarray): 2D numpy array of position vectors of
+                            all persons
         """
-        ## left and right wall
-        # person exceeds left wall, but is within upper and lower walls
-        l_coll = (new_poss[:,0] < 0) & (new_poss[:,1] > 0) \
-            & (new_poss[:,1] < self.room.h)
-        # person exceeds right wall, but is within upper and lower walls
-        r_coll = (new_poss[:,0] > self.room.w) & (new_poss[:,1] > 0) \
-            & (new_poss[:,1] < self.room.h)
-        ## if it's either or...
-        either_r_l = l_coll | r_coll
-        ## restore previous x-position and...
-        new_poss[either_r_l,0] = old_poss[either_r_l,0]
-        ## set y-position after bounce-off. Angle of incidence equals angle
-        ## of reflection. Take a piece of paper and check for your self that
-        ## this works
-        new_poss[either_r_l,1] += (new_poss[either_r_l,1] - old_poss[either_r_l,1])
-        ## y-component of velocity stays the same, but x-component is reversed
-        new_vels[either_r_l] = old_vels[either_r_l] * np.array([-1, 1])[None,:]
-        ## no force acting right after reflection
-        new_grad[either_r_l] = 0.0
+        res = np.zeros(pos.shape)
 
-        ## lower and upper wall
-        # yadda yadda, it's basically the same as above 
-        ll_coll = (new_poss[:,1] < 0) & (new_poss[:,0] > 0) \
-            & (new_poss[:,0] < self.room.w)
-        u_coll = (new_poss[:,1] > self.room.h) & (new_poss[:,0] > 0) \
-            & (new_poss[:,0] < self.room.w)
-        either_ll_u = ll_coll | u_coll
-        new_poss[either_ll_u,1] = old_poss[either_ll_u,1]
-        new_poss[either_ll_u,0] += (new_poss[either_ll_u,0] - old_poss[either_ll_u,0])
-        new_vels[either_ll_u] = old_vels[either_ll_u] * np.array([1, -1])[None,:]
-        new_grad[either_ll_u] = 0.0
+        ## upper wall
+        cond = pos[:,1] > self.room.height
+        res[cond, 1] -= pos[cond, 1] - self.room.height
+        ## lower wall
+        cond = pos[:,1] < 0.0
+        res[cond, 1] -= pos[cond, 1]
+        ## right wall
+        cond = pos[:,0] > self.room.width
+        res[cond, 0] -= pos[cond, 0] - self.room.width
+        ## left wall
+        cond = pos[:,0] < 0.0
+        res[cond, 0] -= pos[cond, 0]
 
-        ## if a person is exceeding both a horizontal and a vertical wall,
-        ## they probably just wander off to infinity... transcending the
-        ## situation, so to say
-        ## Fix that if you like
-
-        return new_poss, new_vels, new_grad
-
+        return self.wall_force_constant * res
+                
 
     def _integration_step(self, poss, vels):
         """
@@ -215,7 +191,7 @@ class Simulation(object):
         poss = poss.copy()
         vels = vels.copy()
         poss += vels * self.dt + 0.5 * self._oldgrad * self.dt * self.dt
-        new_grad = self.gradient(poss)
+        new_grad = self.inter_person_gradient(poss) + self.wall_gradient(poss)
         vels += 0.5 * (self._oldgrad + new_grad) * self.dt
 
         return poss, vels, new_grad
@@ -229,16 +205,13 @@ class Simulation(object):
         old_vels = np.array([p.vel for p in self.persons])
         new_poss, new_vels, new_grad = self._integration_step(old_poss,
                                                               old_vels)
-        new_poss, new_vels, new_grad = self._bounce_off_walls(new_poss,
-                                                              old_poss,
-                                                              new_vels,
-                                                              old_vels,
-                                                              new_grad)
 
         ## we cache the gradient
         self._oldgrad = new_grad
 
         for i, (pos, vel) in enumerate(zip(new_poss, new_vels)):
+            if self.persons[i].dead:
+                continue
             self.persons[i].pos = pos
             self.persons[i].vel = vel
         
