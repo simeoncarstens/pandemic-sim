@@ -1,6 +1,9 @@
+from abc import abstractmethod
+
 import numpy as np
 
 np.random.seed(42)
+
 
 class Person(object):
     def __init__(self, pos, vel, in_prob, out_prob, death_prob, infected=False,
@@ -46,20 +49,101 @@ class Person(object):
             self.infected = False
             self.vel[:] = 0.0
 
+
+class Geometry(object):
+    def __init__(self, force_constant):
+        """
+        A class defining the geometry of the space the persons move in.
+
+        Arguments:
+
+        - force_constant (float): Force constant determining strength of 
+                                  the interaction potential between a 
+                                  person and the walls
+                                  The higher it is, the stronger a person
+                                  bounces off a wall.
+        """
+        self.force_constant = force_constant
+
+
+    @abstractmethod
+    def gradient(self, pos):
+        """
+        The gradient acting on persons due to the geometry.
+        """
+        pass
+
+
+    @abstractmethod
+    def draw(self, ax):
+        pass
+
+
+    @abstractmethod
+    def get_random_position(self):
+        pass
+    
+    
+class RectangleGeometry(Geometry):
+    def __init__(self, width, height, force_constant):
+        """
+        A rectangular geometry.
+
+        Arguments:
         
-class Room(object):
-    def __init__(self, width, height):
+        - width (float): the width of the rectangle
+        - height (floiat): the height of the rectangle
+        """
         self.width = width
         self.height = height
+        
+        super(RectangleGeometry, self).__init__(force_constant)
+
+
+    def gradient(self, pos):
+        res = np.zeros(pos.shape)
+
+        ## upper wall
+        cond = pos[:,1] > self.height
+        res[cond, 1] -= pos[cond, 1] - self.height
+        ## lower wall
+        cond = pos[:,1] < 0.0
+        res[cond, 1] -= pos[cond, 1]
+        ## right wall
+        cond = pos[:,0] > self.width
+        res[cond, 0] -= pos[cond, 0] - self.width
+        ## left wall
+        cond = pos[:,0] < 0.0
+        res[cond, 0] -= pos[cond, 0]
+
+        return self.force_constant * res
+
+
+    def draw(self, ax, radius):
+        ax.set_xlim((0, self.width + radius))
+        ax.set_ylim((0, self.height + radius))
+
+
+    def get_random_position(self):
+        return np.random.uniform(low=(0,0), high=(self.width, self.height))
+
+
+class Environment(object):
+    def __init__(self, geometry):
+        self.geometry = geometry
+
+        
+    def gradient(self, pos):
+        return self.geometry.gradient(pos)
 
 
 class Simulation(object):
-    def __init__(self, room, persons, prob_dist, dt, cutoff, transmit_cutoff,
-                 force_constant, wall_force_constant, time_to_heal):
+    def __init__(self, environment, persons, prob_dist, dt, cutoff,
+                 transmit_cutoff, force_constant, time_to_heal):
         """
         Arguments:
         
-        - room (room): A room object
+        - environment (Environment): An environment object
         - persons (list): A list of persons
         - prob_dist (callable): A function describing a base probability of
                                 infection depending on the distance between
@@ -75,24 +159,18 @@ class Simulation(object):
                                   the interaction potential between two persons.
                                   The higher it is, the more persons bounce
                                   off each other.
-        - wall_force_constant (float): Force constant determining strength of 
-                                       the interaction potential between a 
-                                       person and the walls
-                                       The higher it is, the stronger a person
-                                       bounces off a wall.
         - time_to_heal (int): Number of time steps it takes for a person to
                               become healthy again after they've been infected
         """
-        self.room = room
+        self.environment = environment
         self.persons = persons
         self.prob_dist = prob_dist
         self.dt = dt
         self.cutoff = cutoff
         self.transmit_cutoff = transmit_cutoff
         self.force_constant = force_constant
-        self.wall_force_constant = wall_force_constant
         poss = np.array([p.pos for p in self.persons])
-        self._oldgrad = self.inter_person_gradient(poss) + self.wall_gradient(poss)
+        self._oldgrad = self.inter_person_gradient(poss) + self.environment.gradient(poss)
         self.time_to_heal = time_to_heal
         self._current_step = 0
         
@@ -147,34 +225,6 @@ class Simulation(object):
         return self.force_constant * res
 
 
-    def wall_gradient(self, pos):
-        """
-        Gradient representing the repulsive forces the walls exert on
-        persons.
-
-        Arguments:
-
-        - pos (np.ndarray): 2D numpy array of position vectors of
-                            all persons
-        """
-        res = np.zeros(pos.shape)
-
-        ## upper wall
-        cond = pos[:,1] > self.room.height
-        res[cond, 1] -= pos[cond, 1] - self.room.height
-        ## lower wall
-        cond = pos[:,1] < 0.0
-        res[cond, 1] -= pos[cond, 1]
-        ## right wall
-        cond = pos[:,0] > self.room.width
-        res[cond, 0] -= pos[cond, 0] - self.room.width
-        ## left wall
-        cond = pos[:,0] < 0.0
-        res[cond, 0] -= pos[cond, 0]
-
-        return self.wall_force_constant * res
-                
-
     def _integration_step(self, poss, vels):
         """
         One single velocity Verlet integration step
@@ -191,7 +241,7 @@ class Simulation(object):
         poss = poss.copy()
         vels = vels.copy()
         poss += vels * self.dt + 0.5 * self._oldgrad * self.dt * self.dt
-        new_grad = self.inter_person_gradient(poss) + self.wall_gradient(poss)
+        new_grad = self.inter_person_gradient(poss) + self.environment.gradient(poss)
         vels += 0.5 * (self._oldgrad + new_grad) * self.dt
 
         return poss, vels, new_grad

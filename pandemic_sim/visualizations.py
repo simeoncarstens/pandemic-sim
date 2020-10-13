@@ -22,12 +22,12 @@ class Visualization:
     @abstractmethod
     def visualize_single_step(self, step):
         pass
-        
+
 
 class DefaultVisualization(Visualization):
-    def __init__(self, simulation_results, room, radius):
+    def __init__(self, simulation_results, geometry, radius):
         super(DefaultVisualization, self).__init__(simulation_results)
-        self._room = room
+        self._geometry = geometry
         self._radius = radius
 
         self._check_result_shapes()
@@ -58,8 +58,7 @@ class DefaultVisualization(Visualization):
         gs = gridspec.GridSpec(3, 4)
 
         main_ax = self._figure.add_subplot(gs[:,:3])
-        main_ax.set_xlim((0, self._room.width + self._radius))
-        main_ax.set_ylim((0, self._room.height + self._radius))
+        self._geometry.draw(main_ax, self._radius)
         main_ax.set_aspect('equal')
         main_ax.set_xticks(())
         main_ax.set_yticks(())
