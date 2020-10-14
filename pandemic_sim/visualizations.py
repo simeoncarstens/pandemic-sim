@@ -40,10 +40,52 @@ class RectangleGeometryDrawer(GeometryDrawer):
         ax.set_ylim((0, self.geometry.height + radius))
 
 
+class PersonsDrawer(object):
+    def __init__(self, radius):
+        self._radius = radius
+
+
+    @abstractmethod
+    def draw(self, ax):
+        pass
+
+
+class DefaultPersonsDrawer(PersonsDrawer):
+    def draw(self, current_simulation_state, ax):
+        self._draw_infected(current_simulation_state['infected'], ax)
+        self._draw_healthy(current_simulation_state['healthy'], ax)
+        self._draw_dead(current_simulation_state['dead'], ax)
+
+
+    def _draw_infected(self, currently_infected, ax):
+        inf_circles = [plt.Circle(pos, radius=self._radius, linewidth=0)
+                       for pos in currently_infected]
+        inf_c = matplotlib.collections.PatchCollection(inf_circles,
+                                                       color="orange")
+        ax.add_collection(inf_c)
+        
+
+    def _draw_healthy(self, currently_healthy, ax):
+        healthy_circles = [plt.Circle(pos, radius=self._radius, linewidth=0)
+                           for pos in currently_healthy]
+        healthy_c = matplotlib.collections.PatchCollection(healthy_circles,
+                                                           color="blue")
+        ax.add_collection(healthy_c)
+
+
+    def _draw_dead(self, currently_dead, ax):
+        dead_circles = [plt.Circle(pos, radius=self._radius, linewidth=1)
+                        for pos in currently_dead]
+        dead_c = matplotlib.collections.PatchCollection(dead_circles,
+                                                        color="lightgray")
+        ax.add_collection(dead_c)
+
+
 class DefaultVisualization(Visualization):
-    def __init__(self, simulation_results, geometry_drawer, radius):
+    def __init__(self, simulation_results, geometry_drawer, persons_drawer, radius):
         super(DefaultVisualization, self).__init__(simulation_results)
         self._geometry_drawer = geometry_drawer
+        self._persons_drawer = persons_drawer
         self._radius = radius
         
         self._check_result_shapes()
@@ -97,36 +139,12 @@ class DefaultVisualization(Visualization):
         self._fatalities_ax = fatalities_ax
 
 
-    def _plot_infected(self, currently_infected):
-        inf_circles = [plt.Circle(pos, radius=self._radius, linewidth=0)
-                       for pos in currently_infected]
-        inf_c = matplotlib.collections.PatchCollection(inf_circles,
-                                                       color="orange")
-        self._main_ax.add_collection(inf_c)
-
-
     def _plot_infected_time(self, time_series):
         self._infected_ax.plot(time_series, color='black')
         self._infected_ax.set_xlabel('time')
         self._infected_ax.set_ylabel('# infected')
 
-
-    def _plot_healthy(self, currently_healthy):
-        healthy_circles = [plt.Circle(pos, radius=self._radius, linewidth=0)
-                           for pos in currently_healthy]
-        healthy_c = matplotlib.collections.PatchCollection(healthy_circles,
-                                                           color="blue")
-        self._main_ax.add_collection(healthy_c)
-
-
-    def _plot_dead(self, currently_dead):
-        dead_circles = [plt.Circle(pos, radius=self._radius, linewidth=1)
-                        for pos in currently_dead]
-        dead_c = matplotlib.collections.PatchCollection(dead_circles,
-                                                        color="lightgray")
-        self._main_ax.add_collection(dead_c)
-
-
+    
     def _plot_fatalities_time(self, time_series):
         self._fatalities_ax.plot(time_series, color='black')
         self._fatalities_ax.set_xlabel('time')
@@ -149,12 +167,16 @@ class DefaultVisualization(Visualization):
         currently_infected = positions[step, infected[step]]
         currently_healthy = positions[step, healthy[step]]
         currently_dead = positions[step, fatalities[step]]
-            
-        self._plot_infected(currently_infected)
+
+        current_simulation_state = dict(
+            infected=currently_infected,
+            healthy=currently_healthy,
+            dead=currently_dead
+            )
+
+        self._persons_drawer.draw(current_simulation_state, self._main_ax)
         self._plot_infected_time(infected[:step].sum(1))
-        self._plot_healthy(currently_healthy)
         self._plot_immune_time(immune[:step].sum(1))
-        self._plot_dead(currently_dead)
         self._plot_fatalities_time(fatalities[:step].sum(1))
 
         self.figure.tight_layout()

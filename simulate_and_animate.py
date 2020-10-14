@@ -1,7 +1,7 @@
 import numpy as np
 
 from pandemic_sim.simulation import Person, Simulation, RectangleGeometry
-from pandemic_sim.visualizations import DefaultVisualization, RectangleGeometryDrawer
+from pandemic_sim.visualizations import DefaultVisualization, RectangleGeometryDrawer, DefaultPersonsDrawer
 from pandemic_sim.animators import CelluloidAnimator
 
 
@@ -30,6 +30,7 @@ n_steps = 50 * day_unit
 sim_result = sim.run(n_steps)
 
 radius = sim.cutoff / 2
-viz = DefaultVisualization(sim_result, RectangleGeometryDrawer(room), radius)
+viz = DefaultVisualization(sim_result, RectangleGeometryDrawer(room),
+                           DefaultPersonsDrawer(radius), radius)
 animator = CelluloidAnimator(viz)
 animator.animate(n_steps)
