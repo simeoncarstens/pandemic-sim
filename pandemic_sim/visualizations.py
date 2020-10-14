@@ -24,12 +24,28 @@ class Visualization:
         pass
 
 
-class DefaultVisualization(Visualization):
-    def __init__(self, simulation_results, geometry, radius):
-        super(DefaultVisualization, self).__init__(simulation_results)
-        self._geometry = geometry
-        self._radius = radius
+class GeometryDrawer(object):
+    def __init__(self, geometry):
+        self.geometry = geometry
+        
+        
+    @abstractmethod
+    def draw(self, ax):
+        pass
+    
 
+class RectangleGeometryDrawer(GeometryDrawer):
+    def draw(self, ax, radius):
+        ax.set_xlim((0, self.geometry.width + radius))
+        ax.set_ylim((0, self.geometry.height + radius))
+
+
+class DefaultVisualization(Visualization):
+    def __init__(self, simulation_results, geometry_drawer, radius):
+        super(DefaultVisualization, self).__init__(simulation_results)
+        self._geometry_drawer = geometry_drawer
+        self._radius = radius
+        
         self._check_result_shapes()
         positions = self._simulation_results['all_positions']
         self._n_steps = positions.shape[0]
@@ -58,7 +74,7 @@ class DefaultVisualization(Visualization):
         gs = gridspec.GridSpec(3, 4)
 
         main_ax = self._figure.add_subplot(gs[:,:3])
-        self._geometry.draw(main_ax, self._radius)
+        self._geometry_drawer.draw(main_ax, self._radius)
         main_ax.set_aspect('equal')
         main_ax.set_xticks(())
         main_ax.set_yticks(())
@@ -142,5 +158,3 @@ class DefaultVisualization(Visualization):
         self._plot_fatalities_time(fatalities[:step].sum(1))
 
         self.figure.tight_layout()
-
-

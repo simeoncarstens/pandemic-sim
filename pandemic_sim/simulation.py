@@ -119,11 +119,6 @@ class RectangleGeometry(Geometry):
         return self.force_constant * res
 
 
-    def draw(self, ax, radius):
-        ax.set_xlim((0, self.width + radius))
-        ax.set_ylim((0, self.height + radius))
-
-
     def get_random_position(self):
         return np.random.uniform(low=(0,0), high=(self.width, self.height))
 
