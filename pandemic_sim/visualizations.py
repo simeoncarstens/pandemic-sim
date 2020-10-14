@@ -15,9 +15,9 @@ class GeometryDrawer(metaclass=ABCMeta):
     
 
 class RectangleGeometryDrawer(GeometryDrawer):
-    def draw(self, ax, radius):
-        ax.set_xlim((0, self.geometry.width + radius))
-        ax.set_ylim((0, self.geometry.height + radius))
+    def draw(self, ax):
+        ax.set_xlim((0, self.geometry.width))
+        ax.set_ylim((0, self.geometry.height))
 
 
 class PersonsDrawer(metaclass=ABCMeta):
@@ -130,12 +130,11 @@ class Visualization(metaclass=ABCMeta):
 
 class DefaultVisualization(Visualization):
     def __init__(self, simulation_results, geometry_drawer, persons_drawer,
-                 curve_plotter, radius):
+                 curve_plotter):
         super(DefaultVisualization, self).__init__(simulation_results)
         self._geometry_drawer = geometry_drawer
         self._persons_drawer = persons_drawer
         self._curve_plotter = curve_plotter
-        self._radius = radius
         
         positions = self._simulation_results['all_positions']
         self._n_steps = positions.shape[0]
@@ -153,7 +152,7 @@ class DefaultVisualization(Visualization):
         gs = gridspec.GridSpec(3, 4)
 
         main_ax = self._figure.add_subplot(gs[:,:3])
-        self._geometry_drawer.draw(main_ax, self._radius)
+        self._geometry_drawer.draw(main_ax)
         main_ax.set_aspect('equal')
         main_ax.set_xticks(())
         main_ax.set_yticks(())

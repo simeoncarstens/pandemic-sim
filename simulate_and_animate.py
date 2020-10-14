@@ -34,7 +34,6 @@ sim_result = sim.run(n_steps)
 
 radius = sim.cutoff / 2
 viz = DefaultVisualization(sim_result, RectangleGeometryDrawer(room),
-                           DefaultPersonsDrawer(radius), DefaultCurvesPlotter(),
-                           radius)
+                           DefaultPersonsDrawer(radius), DefaultCurvesPlotter())
 animator = CelluloidAnimator(viz)
 animator.animate(n_steps)
