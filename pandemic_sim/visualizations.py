@@ -4,26 +4,6 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 
-class Visualization(metaclass=ABCMeta):
-    def __init__(self, simulation_results):
-        self._simulation_results = simulation_results
-
-
-    @property
-    def figure(self):
-        return self._figure
-        
-        
-    @abstractmethod
-    def _setup_figure(self):
-        pass
-    
-        
-    @abstractmethod
-    def visualize_single_step(self, step):
-        pass
-
-
 class GeometryDrawer(metaclass=ABCMeta):
     def __init__(self, geometry):
         self.geometry = geometry
@@ -116,24 +96,12 @@ class DefaultCurvesPlotter(CurvesPlotter):
         ax.set_ylabel('# immune')
 
 
-class DefaultVisualization(Visualization):
-    def __init__(self, simulation_results, geometry_drawer, persons_drawer,
-                 curve_plotter, radius):
-        super(DefaultVisualization, self).__init__(simulation_results)
-        self._geometry_drawer = geometry_drawer
-        self._persons_drawer = persons_drawer
-        self._curve_plotter = curve_plotter
-        self._radius = radius
-        
+class Visualization(metaclass=ABCMeta):
+    def __init__(self, simulation_results):
+        self._simulation_results = simulation_results
         self._check_result_shapes()
-        positions = self._simulation_results['all_positions']
-        self._n_steps = positions.shape[0]
-        self._n_persons = positions.shape[1]
 
-        self._setup_figure()
-        self._setup_axes()
 
-        
     def _check_result_shapes(self):
         positions = self._simulation_results['all_positions']
         infected = self._simulation_results['all_infected']
@@ -143,6 +111,38 @@ class DefaultVisualization(Visualization):
         if not len(positions) == len(infected) == len(healthy) \
            == len(fatalities) == len(immune):
             raise ValueError("Simulation result arrays have unequal lengths")
+
+
+    @property
+    def figure(self):
+        return self._figure
+        
+        
+    @abstractmethod
+    def _setup_figure(self):
+        pass
+    
+        
+    @abstractmethod
+    def visualize_single_step(self, step):
+        pass
+        
+
+class DefaultVisualization(Visualization):
+    def __init__(self, simulation_results, geometry_drawer, persons_drawer,
+                 curve_plotter, radius):
+        super(DefaultVisualization, self).__init__(simulation_results)
+        self._geometry_drawer = geometry_drawer
+        self._persons_drawer = persons_drawer
+        self._curve_plotter = curve_plotter
+        self._radius = radius
+        
+        positions = self._simulation_results['all_positions']
+        self._n_steps = positions.shape[0]
+        self._n_persons = positions.shape[1]
+
+        self._setup_figure()
+        self._setup_axes()
 
 
     def _setup_figure(self):
