@@ -1,7 +1,10 @@
 import numpy as np
 
 from pandemic_sim.simulation import Person, Simulation, RectangleGeometry
-from pandemic_sim.visualizations import DefaultVisualization, RectangleGeometryDrawer, DefaultPersonsDrawer
+from pandemic_sim.visualizations import (DefaultVisualization,
+                                         RectangleGeometryDrawer,
+                                         DefaultPersonsDrawer,
+                                         DefaultCurvesPlotter)
 from pandemic_sim.animators import CelluloidAnimator
 
 
@@ -31,6 +34,7 @@ sim_result = sim.run(n_steps)
 
 radius = sim.cutoff / 2
 viz = DefaultVisualization(sim_result, RectangleGeometryDrawer(room),
-                           DefaultPersonsDrawer(radius), radius)
+                           DefaultPersonsDrawer(radius), DefaultCurvesPlotter(),
+                           radius)
 animator = CelluloidAnimator(viz)
 animator.animate(n_steps)

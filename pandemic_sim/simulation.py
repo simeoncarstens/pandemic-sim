@@ -1,4 +1,4 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABCMeta
 
 import numpy as np
 
@@ -50,7 +50,7 @@ class Person(object):
             self.vel[:] = 0.0
 
 
-class Geometry(object):
+class Geometry(metaclass=ABCMeta):
     def __init__(self, force_constant):
         """
         A class defining the geometry of the space the persons move in.
@@ -71,11 +71,6 @@ class Geometry(object):
         """
         The gradient acting on persons due to the geometry.
         """
-        pass
-
-
-    @abstractmethod
-    def draw(self, ax):
         pass
 
 

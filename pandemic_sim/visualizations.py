@@ -1,10 +1,10 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABCMeta
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 
-class Visualization:
+class Visualization(metaclass=ABCMeta):
     def __init__(self, simulation_results):
         self._simulation_results = simulation_results
 
@@ -24,7 +24,7 @@ class Visualization:
         pass
 
 
-class GeometryDrawer(object):
+class GeometryDrawer(metaclass=ABCMeta):
     def __init__(self, geometry):
         self.geometry = geometry
         
@@ -40,7 +40,7 @@ class RectangleGeometryDrawer(GeometryDrawer):
         ax.set_ylim((0, self.geometry.height + radius))
 
 
-class PersonsDrawer(object):
+class PersonsDrawer(metaclass=ABCMeta):
     def __init__(self, radius):
         self._radius = radius
 
@@ -81,11 +81,48 @@ class DefaultPersonsDrawer(PersonsDrawer):
         ax.add_collection(dead_c)
 
 
+class CurvesPlotter(metaclass=ABCMeta):
+    @abstractmethod
+    def plot_infected_time(self, time_series, ax):
+        pass
+    
+
+    @abstractmethod
+    def plot_immune_time(self, time_series, ax):
+        pass
+
+
+    @abstractmethod
+    def plot_fatalities_time(self, time_series, ax):
+        pass
+
+
+class DefaultCurvesPlotter(CurvesPlotter):
+    def plot_infected_time(self, time_series, ax):
+        ax.plot(time_series, color='black')
+        ax.set_xlabel('time')
+        ax.set_ylabel('# infected')
+
+    
+    def plot_fatalities_time(self, time_series, ax):
+        ax.plot(time_series, color='black')
+        ax.set_xlabel('time')
+        ax.set_ylabel('# fatalities')
+
+
+    def plot_immune_time(self, time_series, ax):
+        ax.plot(time_series, color='black')
+        ax.set_xlabel('time')
+        ax.set_ylabel('# immune')
+
+
 class DefaultVisualization(Visualization):
-    def __init__(self, simulation_results, geometry_drawer, persons_drawer, radius):
+    def __init__(self, simulation_results, geometry_drawer, persons_drawer,
+                 curve_plotter, radius):
         super(DefaultVisualization, self).__init__(simulation_results)
         self._geometry_drawer = geometry_drawer
         self._persons_drawer = persons_drawer
+        self._curve_plotter = curve_plotter
         self._radius = radius
         
         self._check_result_shapes()
@@ -139,24 +176,6 @@ class DefaultVisualization(Visualization):
         self._fatalities_ax = fatalities_ax
 
 
-    def _plot_infected_time(self, time_series):
-        self._infected_ax.plot(time_series, color='black')
-        self._infected_ax.set_xlabel('time')
-        self._infected_ax.set_ylabel('# infected')
-
-    
-    def _plot_fatalities_time(self, time_series):
-        self._fatalities_ax.plot(time_series, color='black')
-        self._fatalities_ax.set_xlabel('time')
-        self._fatalities_ax.set_ylabel('# fatalities')
-
-
-    def _plot_immune_time(self, time_series):
-        self._immune_ax.plot(time_series, color='black')
-        self._immune_ax.set_xlabel('time')
-        self._immune_ax.set_ylabel('# immune')
-
-
     def visualize_single_step(self, step):
         positions = self._simulation_results['all_positions']
         infected = self._simulation_results['all_infected']
@@ -175,8 +194,11 @@ class DefaultVisualization(Visualization):
             )
 
         self._persons_drawer.draw(current_simulation_state, self._main_ax)
-        self._plot_infected_time(infected[:step].sum(1))
-        self._plot_immune_time(immune[:step].sum(1))
-        self._plot_fatalities_time(fatalities[:step].sum(1))
+        self._curve_plotter.plot_infected_time(infected[:step].sum(1),
+                                               self._infected_ax)
+        self._curve_plotter.plot_immune_time(immune[:step].sum(1),
+                                             self._immune_ax)
+        self._curve_plotter.plot_fatalities_time(fatalities[:step].sum(1),
+                                                 self._fatalities_ax)
 
         self.figure.tight_layout()
