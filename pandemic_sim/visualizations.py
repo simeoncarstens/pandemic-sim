@@ -141,7 +141,7 @@ class Visualization(metaclass=ABCMeta):
 
 class DefaultVisualization(Visualization):
     def __init__(self, simulation_results, geometry_drawer, persons_drawer,
-                 curve_plotter):
+                 curve_plotter, fig_args={}):
         super(DefaultVisualization, self).__init__(simulation_results)
         self._geometry_drawer = geometry_drawer
         self._persons_drawer = persons_drawer
@@ -151,12 +151,12 @@ class DefaultVisualization(Visualization):
         self._n_steps = positions.shape[0]
         self._n_persons = positions.shape[1]
 
-        self._setup_figure()
+        self._setup_figure(fig_args)
         self._setup_axes()
 
 
-    def _setup_figure(self):
-        self._figure = plt.figure()
+    def _setup_figure(self, fig_args):
+        self._figure = plt.figure(**fig_args)
     
 
     def _setup_axes(self):
