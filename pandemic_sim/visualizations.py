@@ -96,6 +96,17 @@ class DefaultCurvesPlotter(CurvesPlotter):
         ax.set_ylabel('# immune')
 
 
+class SimpleHealthSystemCurvesPlotter(DefaultCurvesPlotter):
+    def __init__(self, health_system):
+        self._health_system = health_system
+
+
+    def plot_infected_time(self, time_series, ax):
+        ax.axhline(self._health_system.threshold, ls='--',
+                   color='red')
+        super().plot_infected_time(time_series, ax)
+
+
 class Visualization(metaclass=ABCMeta):
     def __init__(self, simulation_results):
         self._simulation_results = simulation_results

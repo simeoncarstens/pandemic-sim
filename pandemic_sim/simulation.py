@@ -118,23 +118,53 @@ class RectangleGeometry(Geometry):
         return np.random.uniform(low=(0,0), high=(self.width, self.height))
 
 
-class Environment(object):
-    def __init__(self, geometry):
-        self.geometry = geometry
+class HealthSystem(metaclass=ABCMeta):
+    @abstractmethod
+    def calculate_death_probability_factor(self, population_state):
+        """
+        Calculates a factor which depends on the populaton macrostate
+        (number of infected persons, number of total persons) and by
+        which in a simulation the death probability is multiplied
+
+        Arguments:
+
+        - population_state (dict): dictionary of quantities defining the overall
+                                   state of the population (number of infected
+                                   persons, number of total persons)
+        """
+        pass
+
+
+class NoEffectHealthSystem(HealthSystem):
+    def calculate_death_probability_factor(self, population_state):
+        return 1.0
+
+    
+class SimpleHealthSystem(HealthSystem):
+    def __init__(self, threshold, death_probability_factor):
+        self.threshold = threshold
+        self._death_probability_factor = death_probability_factor
 
         
-    def gradient(self, pos):
-        return self.geometry.gradient(pos)
-
+    def calculate_death_probability_factor(self, population_state):
+        n_infected = population_state['n_infected']
+        if n_infected > self.threshold:
+            return self._death_probability_factor
+        else:
+            return 1.0
+    
 
 class Simulation(object):
-    def __init__(self, environment, persons, prob_dist, dt, cutoff,
-                 transmit_cutoff, force_constant, time_to_heal):
+    def __init__(self, geometry, persons, health_system, prob_dist, dt,
+                 cutoff, transmit_cutoff, force_constant, time_to_heal):
         """
         Arguments:
         
-        - environment (Environment): An environment object
+        - geometry (Geometry): A geometry object which defines the space in
+                               which persons are moving
         - persons (list): A list of persons
+        - health_system (HealthSystem): A HealthSystem object which possibly
+                                        influences the death probability
         - prob_dist (callable): A function describing a base probability of
                                 infection depending on the distance between
                                 two persons
@@ -152,15 +182,16 @@ class Simulation(object):
         - time_to_heal (int): Number of time steps it takes for a person to
                               become healthy again after they've been infected
         """
-        self.environment = environment
+        self.geometry = geometry
         self.persons = persons
+        self.health_system = health_system
         self.prob_dist = prob_dist
         self.dt = dt
         self.cutoff = cutoff
         self.transmit_cutoff = transmit_cutoff
         self.force_constant = force_constant
         poss = np.array([p.pos for p in self.persons])
-        self._oldgrad = self.inter_person_gradient(poss) + self.environment.gradient(poss)
+        self._oldgrad = self.inter_person_gradient(poss) + self.geometry.gradient(poss)
         self.time_to_heal = time_to_heal
         self._current_step = 0
         
@@ -231,7 +262,7 @@ class Simulation(object):
         poss = poss.copy()
         vels = vels.copy()
         poss += vels * self.dt + 0.5 * self._oldgrad * self.dt * self.dt
-        new_grad = self.inter_person_gradient(poss) + self.environment.gradient(poss)
+        new_grad = self.inter_person_gradient(poss) + self.geometry.gradient(poss)
         vels += 0.5 * (self._oldgrad + new_grad) * self.dt
 
         return poss, vels, new_grad
@@ -254,12 +285,26 @@ class Simulation(object):
             self.persons[i].vel = vel
         
 
+    def _calculate_population_state(self):
+        """
+        Calculates overall quantities characterizing the state of the population:
+        number of dead people, number of infected people, number of alive people
+        """
+        microstates = np.array([(p.dead, p.infected) for p in self.persons])
+        n_dead = microstates[:,0].sum()
+        n_infected = microstates[:,1].sum()
+        n_alive = len(self.persons) - n_dead
+
+        return {'n_dead': n_dead, 'n_infected': n_infected, 'n_alive': n_alive}
+           
+            
     def step(self):
         """
         Advance the simulation by one time step.
         """
         self._move_persons()
 
+        population_state = self._calculate_population_state()
         for p in self.persons:
             if p.infected:
                 if p.infected_since is None:
@@ -268,7 +313,10 @@ class Simulation(object):
                     p.infected = False
                     p.immune = True
                 else:
-                    if np.random.random() < p.death_prob:
+                    death_prob = self.health_system.calculate_death_probability_factor(
+                        population_state)
+                    death_prob *= p.death_prob
+                    if np.random.random() < death_prob:
                         p.dead = True
         self._current_step += 1
                     

@@ -1,10 +1,13 @@
 import numpy as np
 
-from pandemic_sim.simulation import Person, Simulation, RectangleGeometry
+from pandemic_sim.simulation import (Person,
+                                     Simulation,
+                                     RectangleGeometry,
+                                     SimpleHealthSystem)
 from pandemic_sim.visualizations import (DefaultVisualization,
                                          RectangleGeometryDrawer,
                                          DefaultPersonsDrawer,
-                                         DefaultCurvesPlotter)
+                                         SimpleHealthSystemCurvesPlotter)
 from pandemic_sim.animators import CelluloidAnimator
 
 
@@ -21,9 +24,10 @@ chosen_ones = np.random.choice(np.arange(n_persons), n_persons // 50)
 for i in chosen_ones:
     persons[i].infected = True
 
-
+health_system = SimpleHealthSystem(threshold=150, death_probability_factor=5.0)
+    
 day_unit = 10
-sim = Simulation(room, persons, lambda d:  d < 1,
+sim = Simulation(room, persons, health_system, lambda d:  d < 1,
                  dt=0.1,
                  cutoff=0.75,
                  transmit_cutoff=3,
@@ -33,7 +37,9 @@ n_steps = 50 * day_unit
 sim_result = sim.run(n_steps)
 
 radius = sim.cutoff / 2
-viz = DefaultVisualization(sim_result, RectangleGeometryDrawer(room),
-                           DefaultPersonsDrawer(radius), DefaultCurvesPlotter())
+curves_plotter = SimpleHealthSystemCurvesPlotter(health_system)
+viz = DefaultVisualization(sim_result, RectangleGeometryDrawer(room),    
+                           DefaultPersonsDrawer(radius),
+                           curves_plotter)
 animator = CelluloidAnimator(viz)
 animator.animate(n_steps)
