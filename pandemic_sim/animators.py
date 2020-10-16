@@ -21,9 +21,9 @@ class CelluloidAnimator(Animator):
         self._out = out
         
         
-    def animate(self, n_steps, start=0):
+    def animate(self, n_steps, start=0, interval=1):
         camera = Camera(self._visualization.figure)
-        for step in range(start, n_steps):
+        for step in range(start, n_steps, interval):
             if step % 50 == 0:
                 print(f"Animating step {step}/{n_steps}...")
             self._visualization.visualize_single_step(step)
