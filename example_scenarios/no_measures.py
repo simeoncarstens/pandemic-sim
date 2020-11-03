@@ -18,20 +18,13 @@ room = RectangleGeometry(25, 25, force_constant=20.0)
 # base probability of transmission during one timestep of an encounter between
 # two persons
 base_prob = 0.00015
-# reduce outgoing probability by 95%; meaning that a person is less likely to
-# spread the virus in its environment. This emulates efficient filtering of
-# breathed-out air.
-out_prob = 0.05
-# do not reduce ingoing probability, meaning that a person catches the virus
-# with the base probability if theyare close to a person having spread
-# the virus. This emulates no filtering of inhaled air by masks
-in_prob = 1.0
+
 initial_positions = room.get_random_position_set(n_persons)
 max_vel = 2
 persons = [Person(pos,
                   np.random.uniform(low=(-max_vel, -max_vel),
                                     high=(max_vel, max_vel), size=2),
-                  in_prob, out_prob,
+                  1.0, 1.0,
                   base_prob, False)
            for pos in initial_positions]
 # some persons actually start out being infected
@@ -50,7 +43,7 @@ sim = Simulation(room, persons, health_system, lambda d:  d < 1,
                  transmit_cutoff=3,
                  force_constant=20,
                  time_to_heal=150)
-n_steps = 500
+n_steps = 300
 sim_result = sim.run(n_steps)
 
 radius = sim.cutoff / 2
