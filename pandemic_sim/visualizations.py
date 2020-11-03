@@ -84,7 +84,7 @@ class DefaultPersonsDrawer(PersonsDrawer):
 
         - radius (float): the radius of a circle representing a single person
         """
-        super().__init__(self, radius)
+        super().__init__(radius)
 
 
     def draw(self, current_simulation_state, ax):
@@ -363,7 +363,7 @@ class DefaultVisualization(Visualization):
         - figure_args (dict): dictionary of arguments to be passed to the
                               plt.figure() call
         """
-        super(DefaultVisualization, self).__init__(simulation_results)
+        super().__init__(simulation_results)
         self._geometry_drawer = geometry_drawer
         self._persons_drawer = persons_drawer
         self._curve_plotter = curve_plotter

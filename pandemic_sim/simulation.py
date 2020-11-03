@@ -107,7 +107,7 @@ class RectangleGeometry(Geometry):
         self.width = width
         self.height = height
         
-        super(RectangleGeometry, self).__init__(force_constant)
+        super().__init__(force_constant)
 
 
     def gradient(self, pos):
