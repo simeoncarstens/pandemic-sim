@@ -46,14 +46,14 @@ health_system = SimpleHealthSystem(threshold=50, death_probability_factor=5.0)
     
 sim = Simulation(room, persons, health_system, lambda d:  d < 1,
                  dt=0.1,
-                 cutoff=0.75,
-                 transmit_cutoff=3,
+                 min_distance=0.75,
+                 max_transmit_distance=3,
                  force_constant=20,
                  time_to_heal=150)
 n_steps = 500
 sim_result = sim.run(n_steps)
 
-radius = sim.cutoff / 2
+radius = sim.min_distance / 2
 curves_plotter = SimpleHealthSystemCurvesPlotter(health_system)
 viz = DefaultVisualization(sim_result, RectangleGeometryDrawer(room),    
                            DefaultPersonsDrawer(radius),

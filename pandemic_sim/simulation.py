@@ -249,7 +249,7 @@ class SimpleHealthSystem(HealthSystem):
 
 class Simulation(object):
     def __init__(self, geometry, persons, health_system, prob_dist, dt,
-                 cutoff, transmit_cutoff, force_constant, time_to_heal):
+                 min_distance, max_transmit_distance, force_constant, time_to_heal):
         """
         Arguments:
         
@@ -263,11 +263,11 @@ class Simulation(object):
                                 two persons
         - dt (float): Time step for numerical integration of equations of 
                       motion
-        - cutoff (float): Cutoff distance between two persons below which
-                          the force pushing them away from each other kicks
-                          in
-        - transmit_cutoff (float): Cutoff distance between two persons above
-                                   which no transmission can happen
+        - min_distance (float): Distance between two persons below which
+                                the force pushing them away from each other kicks
+                                in
+        - max_transmit_distance (float): Maximum distance between two persons
+                                         above which no transmission can happen
         - force_constant (float): Force constant determining strength of 
                                   the interaction potential between two persons.
                                   The higher it is, the more persons bounce
@@ -280,8 +280,8 @@ class Simulation(object):
         self.health_system = health_system
         self.prob_dist = prob_dist
         self.dt = dt
-        self.cutoff = cutoff
-        self.transmit_cutoff = transmit_cutoff
+        self.min_distance = min_distance
+        self.max_transmit_distance = max_transmit_distance
         self.force_constant = force_constant
         poss = np.array([p.pos for p in self.persons])
         self._oldgrad = self.inter_person_gradient(poss) + self.geometry.gradient(poss)
@@ -333,10 +333,10 @@ class Simulation(object):
             for j, pos2 in enumerate(pos[i+1:], i+1):
                 if self.persons[j].dead:
                     continue
-                if dm[i,j] < self.transmit_cutoff:
+                if dm[i,j] < self.max_transmit_distance:
                     self._maybe_transmit(self.persons[i], self.persons[j], dm[i,j])
-                if dm[i,j] < self.cutoff:
-                    f = (self.cutoff - dm[i,j]) / dm[i,j] * (pos1 - pos2)
+                if dm[i,j] < self.min_distance:
+                    f = (self.min_distance - dm[i,j]) / dm[i,j] * (pos1 - pos2)
                     res[i] += f
                     res[j] -= f
                     
