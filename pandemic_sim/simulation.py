@@ -6,8 +6,6 @@ from abc import abstractmethod, ABCMeta
 
 import numpy as np
 
-np.random.seed(42)
-
 
 class Person(object):
     def __init__(self, pos, vel, in_prob, out_prob, death_prob, infected=False,
@@ -92,7 +90,20 @@ class Geometry(metaclass=ABCMeta):
         - a numpy.ndarray with random positions valid in the geometry
         """
         pass
-    
+
+
+    @abstractmethod
+    def get_random_position_set(self, n_positions):
+        """
+        Gets a set of positions with ideally on average high distances between
+        each position to avoid overlaps.
+
+        Arguments:
+
+        - n_positions (int): number of random positions to draw
+        """
+        pass
+
     
 class RectangleGeometry(Geometry):
     def __init__(self, width, height, force_constant):
@@ -150,6 +161,27 @@ class RectangleGeometry(Geometry):
         - a numpy.ndarray with random positions
         """
         return np.random.uniform(low=(0,0), high=(self.width, self.height))
+
+    
+    def get_random_position_set(self, n_positions):
+        """
+        Gets a set of positions with ideally on average high distances between
+        each position to avoid overlaps.
+
+        Arguments:
+
+        - n_positions (int): number of random positions to draw
+        """
+        w = self.width
+        h = self.height
+        n_x = int(np.ceil(w * np.sqrt(n_positions) / np.sqrt(w * h)))
+        n_y = int(np.ceil(h * np.sqrt(n_positions) / np.sqrt(w * h)))
+        all_coords = [(x, y) for x in np.linspace(0, self.width, n_x)
+                      for y in np.linspace(0, self.height, n_y)]
+        all_coords = np.array(all_coords)
+        return all_coords[np.random.choice(np.arange(len(all_coords)),
+                                           n_positions, False)]
+        
 
 
 class HealthSystem(metaclass=ABCMeta):
