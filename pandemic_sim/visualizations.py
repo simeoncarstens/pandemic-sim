@@ -236,6 +236,8 @@ class DefaultCurvesPlotter(CurvesPlotter):
         ax.plot(time_series, color='black')
         ax.set_xlabel('time')
         ax.set_ylabel('# fatalities')
+        if len(time_series) > 0:
+            ax.text(0.05, 0.85, str(time_series[-1]), transform=ax.transAxes)
 
 
     def plot_immune_time(self, time_series, ax):
