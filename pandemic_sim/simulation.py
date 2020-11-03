@@ -1,3 +1,7 @@
+"""
+Classes for numerically simulating an epidemic.
+"""
+
 from abc import abstractmethod, ABCMeta
 
 import numpy as np
@@ -70,12 +74,23 @@ class Geometry(metaclass=ABCMeta):
     def gradient(self, pos):
         """
         The gradient acting on persons due to the geometry.
+
+        Returns:
+
+        - a numpy.ndarray containing the gradient due to the walls
         """
         pass
 
 
     @abstractmethod
     def get_random_position(self):
+        """
+        Get a random position within the boundaries of the geometry
+
+        Returns:
+        
+        - a numpy.ndarray with random positions valid in the geometry
+        """
         pass
     
     
@@ -87,7 +102,7 @@ class RectangleGeometry(Geometry):
         Arguments:
         
         - width (float): the width of the rectangle
-        - height (floiat): the height of the rectangle
+        - height (float): the height of the rectangle
         """
         self.width = width
         self.height = height
@@ -96,6 +111,18 @@ class RectangleGeometry(Geometry):
 
 
     def gradient(self, pos):
+        """
+        The gradient acting on a person due to a collision with the four walls
+        of this geometry.
+
+        Arguments:
+
+        - pos (numpy.ndarray): 2D position vector of a person
+
+        Returns:
+
+        - a numpy.ndarray containing the gradient
+        """
         res = np.zeros(pos.shape)
 
         ## upper wall
@@ -115,6 +142,13 @@ class RectangleGeometry(Geometry):
 
 
     def get_random_position(self):
+        """
+        Get a random position within the four walls defined by this geometry
+
+        Returns:
+
+        - a numpy.ndarray with random positions
+        """
         return np.random.uniform(low=(0,0), high=(self.width, self.height))
 
 
@@ -136,20 +170,47 @@ class HealthSystem(metaclass=ABCMeta):
 
 
 class NoEffectHealthSystem(HealthSystem):
-    def calculate_death_probability_factor(self, population_state):
+    def calculate_death_probability_factor(self, _):
+        """
+        Returns a factor of 1.0 indepent from the population state.
+        """
+
         return 1.0
 
     
 class SimpleHealthSystem(HealthSystem):
     def __init__(self, threshold, death_probability_factor):
+        """
+        Simple health system which simulates limited capacity by increasing
+        the death probability if the number of infected people exceeds a 
+        certain threshold
+
+        Arguments:
+        
+        - thresold (int): critical number of infected persons
+        - death_probability_factor (float): factor with which the default death
+                                            probability gets multiplied in case
+                                            of too many infected persons
+        """
         self.threshold = threshold
-        self._death_probability_factor = death_probability_factor
+        self.death_probability_factor = death_probability_factor
 
         
     def calculate_death_probability_factor(self, population_state):
+        """
+        Returns the death probability factor if number of infected people
+        exceeds a certain threshold, else returns 1.0
+
+        Arguments:
+
+        - population_state (dict): dictionary of quantities defining the overall
+                                   state of the population (number of infected
+                                   persons, number of total persons)
+        """
+        
         n_infected = population_state['n_infected']
         if n_infected > self.threshold:
-            return self._death_probability_factor
+            return self.death_probability_factor
         else:
             return 1.0
     
@@ -226,6 +287,10 @@ class Simulation(object):
         
         - pos (np.ndarray): 2D numpy array of position vectors of
                             all persons
+
+        Returns:
+        - a numpy.ndarrray containing the gradient due to interactions
+          between persons
         """
         dm = np.linalg.norm(pos[None, :] - pos[:, None], axis=2)
         res = np.zeros(pos.shape)
@@ -289,6 +354,11 @@ class Simulation(object):
         """
         Calculates overall quantities characterizing the state of the population:
         number of dead people, number of infected people, number of alive people
+
+        Returns:
+
+        - a dictionary with the macroscopic population state. Keys are
+          "n_dead", "n_infected", "n_alive".
         """
         microstates = np.array([(p.dead, p.infected) for p in self.persons])
         n_dead = microstates[:,0].sum()

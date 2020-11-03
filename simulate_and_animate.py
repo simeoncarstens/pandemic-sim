@@ -5,8 +5,8 @@ from pandemic_sim.simulation import (Person,
                                      RectangleGeometry,
                                      SimpleHealthSystem)
 from pandemic_sim.visualizations import (DefaultVisualization,
-                                         RectangleGeometryDrawer,
                                          DefaultPersonsDrawer,
+                                         RectangleGeometryDrawer,
                                          SimpleHealthSystemCurvesPlotter)
 from pandemic_sim.animators import CelluloidAnimator
 
