@@ -34,6 +34,7 @@ class Person(object):
         self.infected_since = None
         self._dead = False
         self.death_prob = death_prob
+        self.infected_persons = []
 
     @property
     def dead(self):
@@ -304,9 +305,13 @@ class Simulation(object):
             if p1.infected & ~p2.immune:
                 total_prob = base_prob * p1.out_prob * p2.in_prob
                 p2.infected = np.random.random() < total_prob
+                if p2.infected:
+                    p1.infected_persons.append(p2)
             elif p2.infected & ~p1.immune:
                 total_prob = base_prob * p2.out_prob * p1.in_prob
                 p1.infected = np.random.random() < total_prob
+                if p1.infected:
+                    p2.infected_persons.append(p1)
 
 
     def inter_person_gradient(self, pos):
@@ -414,12 +419,14 @@ class Simulation(object):
                 elif self._current_step - p.infected_since >= self.time_to_heal:
                     p.infected = False
                     p.immune = True
+                    p.infected_persons = []
                 else:
                     death_prob = self.health_system.calculate_death_probability_factor(
                         population_state)
                     death_prob *= p.death_prob
                     if np.random.random() < death_prob:
                         p.dead = True
+                        p.infected_persons = []
         self._current_step += 1
                     
 
@@ -429,6 +436,7 @@ class Simulation(object):
                                   for i, p in enumerate(self.persons)])]
         all_immune = [np.array([p.immune for p in self.persons])]
         all_fatalities = [np.array([p.dead for p in self.persons])]
+        all_rts = []
 
         for i in range(n_steps):
             if i % 50 == 0:
@@ -445,16 +453,18 @@ class Simulation(object):
             all_immune.append(immune)
             fatalities = np.array([p.dead for p in self.persons])
             all_fatalities.append(fatalities)
+            rt = np.mean([len(p.infected_persons) for p in self.persons if p.infected])
+            all_rts.append(rt)
             
         all_positions = np.array(all_positions)
         all_infected = np.array(all_infected)
         all_immune = np.array(all_immune)
         all_fatalities = np.array(all_fatalities)
         all_healthy = ~all_infected & ~all_fatalities
+        all_rts = np.array(all_rts)
 
         print("Done.")
         
         return {'all_positions': all_positions, 'all_healthy': all_healthy,
                 'all_infected': all_infected, 'all_immune': all_immune,
-                'all_fatalities': all_fatalities}
-
+                'all_fatalities': all_fatalities, 'all_rts': all_rts}
