@@ -453,3 +453,101 @@ class DefaultVisualization(Visualization):
                                                  self._fatalities_ax)
 
         self.figure.tight_layout()
+
+
+class RPositivityVisualization(DefaultVisualization):
+
+    def _setup_axes(self):
+        """
+        Sets up the subplots
+        """
+        gs = gridspec.GridSpec(3, 5)
+
+        main_ax = self._figure.add_subplot(gs[:,:3])
+        self._geometry_drawer.draw(main_ax)
+        main_ax.set_aspect('equal')
+        main_ax.set_xticks(())
+        main_ax.set_yticks(())
+
+        infected_ax = self._figure.add_subplot(gs[0,3])
+        infected_ax.set_xlim((0, self._n_steps))
+        infected_ax.set_ylim((0, self._n_persons))
+
+        immune_ax = self._figure.add_subplot(gs[1,3])
+        immune_ax.set_xlim((0, self._n_steps))
+        immune_ax.set_ylim((0, self._n_persons))
+
+        fatalities_ax = self._figure.add_subplot(gs[2,3])
+        fatalities_ax.set_xlim((0, self._n_steps))
+        fatalities_ax.set_ylim((0, self._n_persons // 3))
+
+        positivity_rate_ax = self._figure.add_subplot(gs[0,4])
+        positivity_rate_ax.set_xlim((0, self._n_steps))
+        positivity_rate_ax.set_ylim((0, 1))
+
+        rt_ax = self._figure.add_subplot(gs[1,4])
+        rt_ax.set_xlim((0, self._n_steps))
+        rt_ax.set_ylim((0, 3))
+        
+        self._main_ax = main_ax
+        self._infected_ax = infected_ax
+        self._immune_ax = immune_ax
+        self._fatalities_ax = fatalities_ax
+        self._positivity_rate_ax = positivity_rate_ax
+        self._rt_ax = rt_ax
+        
+
+    def _plot_positivity_rate(self, time_series, ax):
+        ax.plot(time_series, color='black')
+        ax.set_ylabel('positivity rate')
+        ax.set_xlabel('time')
+        if len(time_series) > 0:
+            ax.text(0.05, 0.85, str(time_series[-1]), transform=ax.transAxes)
+
+        
+    def _plot_rt(self, time_series, ax):
+        ax.plot(time_series, color='black')
+        ax.set_ylabel('$R_t$')
+        ax.set_xlabel('time')
+        if len(time_series) > 0:
+            ax.text(0.05, 0.85, str(time_series[-1]), transform=ax.transAxes)
+
+        
+    def visualize_single_step(self, step):
+        """
+        Visualizes a single step.
+
+        Arguments:
+
+        - step (int): simulation time step which to visualize
+        """
+        positions = self._simulation_results['all_positions']
+        infected = self._simulation_results['all_infected']
+        immune = self._simulation_results['all_immune']
+        fatalities = self._simulation_results['all_fatalities']
+        healthy = self._simulation_results['all_healthy']
+        rts = self._simulation_results['all_rts']
+
+        currently_infected = positions[step, infected[step]]
+        currently_healthy = positions[step, healthy[step]]
+        currently_dead = positions[step, fatalities[step]]
+
+        current_simulation_state = dict(
+            infected=currently_infected,
+            healthy=currently_healthy,
+            dead=currently_dead
+            )
+
+        self._persons_drawer.draw(current_simulation_state, self._main_ax)
+        self._curve_plotter.plot_infected_time(infected[:step].sum(1),
+                                               self._infected_ax)
+        self._curve_plotter.plot_immune_time(immune[:step].sum(1),
+                                             self._immune_ax)
+        self._curve_plotter.plot_fatalities_time(fatalities[:step].sum(1),
+                                                 self._fatalities_ax)
+
+        self._plot_positivity_rate(infected[:step].mean(1),
+                                   self._positivity_rate_ax)
+        self._plot_rt(rts[:step], self._rt_ax)
+        
+        self.figure.tight_layout()
