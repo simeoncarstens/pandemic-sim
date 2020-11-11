@@ -5,6 +5,7 @@ from pandemic_sim.simulation import (Person,
                                      RectangleGeometry,
                                      SimpleHealthSystem)
 from pandemic_sim.visualizations import (DefaultVisualization,
+                                         RPositivityVisualization,
                                          DefaultPersonsDrawer,
                                          RectangleGeometryDrawer,
                                          SimpleHealthSystemCurvesPlotter)
@@ -55,9 +56,12 @@ sim_result = sim.run(n_steps)
 
 radius = sim.min_distance / 2
 curves_plotter = SimpleHealthSystemCurvesPlotter(health_system)
-viz = DefaultVisualization(sim_result, RectangleGeometryDrawer(room),    
-                           DefaultPersonsDrawer(radius),
-                           curves_plotter)
+# viz = DefaultVisualization(sim_result, RectangleGeometryDrawer(room),    
+#                            DefaultPersonsDrawer(radius),
+#                            curves_plotter)
+viz = RPositivityVisualization(sim_result, RectangleGeometryDrawer(room),    
+                               DefaultPersonsDrawer(radius),
+                               curves_plotter, fig_args={'figsize': (10,6)})
 
 animator = CelluloidAnimator(viz)
 # interval=2 means that only every second step is shown in the video,
