@@ -1,9 +1,10 @@
 import numpy as np
 
-from pandemic_sim.simulation import (Person,
-                                     Simulation,
-                                     RectangleGeometry,
-                                     SimpleHealthSystem)
+from pandemic_sim.simulation import Person, Simulation
+from pandemic_sim.geometries import RectangleGeometry
+from pandemic_sim.health_systems import SimpleHealthSystem
+from pandemic_sim.particle_engines import (DefaultParticleEngine,
+                                           VelocityVerletIntegrator)
 from pandemic_sim.visualizations import (DefaultVisualization,
                                          DefaultPersonsDrawer,
                                          RectangleGeometryDrawer,
@@ -37,16 +38,21 @@ for i in chosen_ones:
 # is increased fivefold
 health_system = SimpleHealthSystem(threshold=50, death_probability_factor=5.0)
     
+# Set up the particle engine responsible for physical simulation
+pe = DefaultParticleEngine(cutoff=0.75, geometry_gradient=room.gradient,
+                           integrator_params={'timestep': 0.1},
+                           integrator_class=VelocityVerletIntegrator,
+                           inter_particle_force_constant=20.0,
+                           geometry_force_constant=20.0)
+
+# Set up simulation object
 sim = Simulation(room, persons, health_system, lambda d:  d < 1,
-                 dt=0.1,
-                 min_distance=0.75,
-                 max_transmit_distance=3,
-                 force_constant=20,
+                 max_transmit_distance=3, particle_engine=pe,
                  time_to_heal=150)
 n_steps = 300
 sim_result = sim.run(n_steps)
 
-radius = sim.min_distance / 2
+radius = pe.cutoff / 2
 curves_plotter = SimpleHealthSystemCurvesPlotter(health_system)
 viz = DefaultVisualization(sim_result, RectangleGeometryDrawer(room),    
                            DefaultPersonsDrawer(radius),

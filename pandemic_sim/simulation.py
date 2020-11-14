@@ -52,204 +52,9 @@ class Person(object):
             self.vel[:] = 0.0
 
 
-class Geometry(metaclass=ABCMeta):
-    def __init__(self, force_constant):
-        """
-        A class defining the geometry of the space the persons move in.
-
-        Arguments:
-
-        - force_constant (float): Force constant determining strength of 
-                                  the interaction potential between a 
-                                  person and the walls
-                                  The higher it is, the stronger a person
-                                  bounces off a wall.
-        """
-        self.force_constant = force_constant
-
-
-    @abstractmethod
-    def gradient(self, pos):
-        """
-        The gradient acting on persons due to the geometry.
-
-        Returns:
-
-        - a numpy.ndarray containing the gradient due to the walls
-        """
-        pass
-
-
-    @abstractmethod
-    def get_random_position(self):
-        """
-        Get a random position within the boundaries of the geometry
-
-        Returns:
-        
-        - a numpy.ndarray with random positions valid in the geometry
-        """
-        pass
-
-
-    @abstractmethod
-    def get_random_position_set(self, n_positions):
-        """
-        Gets a set of positions with ideally on average high distances between
-        each position to avoid overlaps.
-
-        Arguments:
-
-        - n_positions (int): number of random positions to draw
-        """
-        pass
-
-    
-class RectangleGeometry(Geometry):
-    def __init__(self, width, height, force_constant):
-        """
-        A rectangular geometry.
-
-        Arguments:
-        
-        - width (float): the width of the rectangle
-        - height (float): the height of the rectangle
-        """
-        self.width = width
-        self.height = height
-        
-        super().__init__(force_constant)
-
-
-    def gradient(self, pos):
-        """
-        The gradient acting on a person due to a collision with the four walls
-        of this geometry.
-
-        Arguments:
-
-        - pos (numpy.ndarray): 2D position vector of a person
-
-        Returns:
-
-        - a numpy.ndarray containing the gradient
-        """
-        res = np.zeros(pos.shape)
-
-        ## upper wall
-        cond = pos[:,1] > self.height
-        res[cond, 1] -= pos[cond, 1] - self.height
-        ## lower wall
-        cond = pos[:,1] < 0.0
-        res[cond, 1] -= pos[cond, 1]
-        ## right wall
-        cond = pos[:,0] > self.width
-        res[cond, 0] -= pos[cond, 0] - self.width
-        ## left wall
-        cond = pos[:,0] < 0.0
-        res[cond, 0] -= pos[cond, 0]
-
-        return self.force_constant * res
-
-
-    def get_random_position(self):
-        """
-        Get a random position within the four walls defined by this geometry
-
-        Returns:
-
-        - a numpy.ndarray with random positions
-        """
-        return np.random.uniform(low=(0,0), high=(self.width, self.height))
-
-    
-    def get_random_position_set(self, n_positions):
-        """
-        Gets a set of positions with ideally on average high distances between
-        each position to avoid overlaps.
-
-        Arguments:
-
-        - n_positions (int): number of random positions to draw
-        """
-        w = self.width
-        h = self.height
-        n_x = int(np.ceil(w * np.sqrt(n_positions) / np.sqrt(w * h)))
-        n_y = int(np.ceil(h * np.sqrt(n_positions) / np.sqrt(w * h)))
-        all_coords = [(x, y) for x in np.linspace(0, self.width, n_x)
-                      for y in np.linspace(0, self.height, n_y)]
-        all_coords = np.array(all_coords)
-        return all_coords[np.random.choice(np.arange(len(all_coords)),
-                                           n_positions, False)]
-        
-
-
-class HealthSystem(metaclass=ABCMeta):
-    @abstractmethod
-    def calculate_death_probability_factor(self, population_state):
-        """
-        Calculates a factor which depends on the populaton macrostate
-        (number of infected persons, number of total persons) and by
-        which in a simulation the death probability is multiplied
-
-        Arguments:
-
-        - population_state (dict): dictionary of quantities defining the overall
-                                   state of the population (number of infected
-                                   persons, number of total persons)
-        """
-        pass
-
-
-class NoEffectHealthSystem(HealthSystem):
-    def calculate_death_probability_factor(self, _):
-        """
-        Returns a factor of 1.0 indepent from the population state.
-        """
-
-        return 1.0
-
-    
-class SimpleHealthSystem(HealthSystem):
-    def __init__(self, threshold, death_probability_factor):
-        """
-        Simple health system which simulates limited capacity by increasing
-        the death probability if the number of infected people exceeds a 
-        certain threshold
-
-        Arguments:
-        
-        - thresold (int): critical number of infected persons
-        - death_probability_factor (float): factor with which the default death
-                                            probability gets multiplied in case
-                                            of too many infected persons
-        """
-        self.threshold = threshold
-        self.death_probability_factor = death_probability_factor
-
-        
-    def calculate_death_probability_factor(self, population_state):
-        """
-        Returns the death probability factor if number of infected people
-        exceeds a certain threshold, else returns 1.0
-
-        Arguments:
-
-        - population_state (dict): dictionary of quantities defining the overall
-                                   state of the population (number of infected
-                                   persons, number of total persons)
-        """
-        
-        n_infected = population_state['n_infected']
-        if n_infected > self.threshold:
-            return self.death_probability_factor
-        else:
-            return 1.0
-    
-
 class Simulation(object):
-    def __init__(self, geometry, persons, health_system, prob_dist, dt,
-                 min_distance, max_transmit_distance, force_constant, time_to_heal):
+    def __init__(self, geometry, persons, health_system, prob_dist,
+                 max_transmit_distance, particle_engine, time_to_heal):
         """
         Arguments:
         
@@ -261,17 +66,10 @@ class Simulation(object):
         - prob_dist (callable): A function describing a base probability of
                                 infection depending on the distance between
                                 two persons
-        - dt (float): Time step for numerical integration of equations of 
-                      motion
-        - min_distance (float): Distance between two persons below which
-                                the force pushing them away from each other kicks
-                                in
         - max_transmit_distance (float): Maximum distance between two persons
                                          above which no transmission can happen
-        - force_constant (float): Force constant determining strength of 
-                                  the interaction potential between two persons.
-                                  The higher it is, the more persons bounce
-                                  off each other.
+        - particle_engine: A ParticleEngine object which is responsible for the
+                           physical part of the simulation
         - time_to_heal (int): Number of time steps it takes for a person to
                               become healthy again after they've been infected
         """
@@ -279,17 +77,15 @@ class Simulation(object):
         self.persons = persons
         self.health_system = health_system
         self.prob_dist = prob_dist
-        self.dt = dt
-        self.min_distance = min_distance
+        self.particle_engine = particle_engine
+        self.particle_engine.skip_condition = lambda i: self.persons[i].dead
+        self.particle_engine.pairwise_hook = self._maybe_transmit
         self.max_transmit_distance = max_transmit_distance
-        self.force_constant = force_constant
-        poss = np.array([p.pos for p in self.persons])
-        self._oldgrad = self.inter_person_gradient(poss) + self.geometry.gradient(poss)
         self.time_to_heal = time_to_heal
         self._current_step = 0
         
     
-    def _maybe_transmit(self, p1, p2, d):
+    def _maybe_transmit(self, p1_index, p2_index, d):
         """
         Transmits disease between two persons depending on their distance
         
@@ -299,6 +95,8 @@ class Simulation(object):
         - p2 (Person): second person
         - d (float): distance between the two persons
         """
+        p1 = self.persons[p1_index]
+        p2 = self.persons[p2_index]
         if (p1.infected & (~p2.infected)) or ((~p1.infected) & p2.infected):
             base_prob = self.prob_dist(d)
             if p1.infected & ~p2.immune:
@@ -309,74 +107,14 @@ class Simulation(object):
                 p1.infected = np.random.random() < total_prob
 
 
-    def inter_person_gradient(self, pos):
-        """
-        Gradient of potential energy responsable for making persons
-        bounce off each other. Includes call to _maybe_transmit
-        in order to avoid a second double loop.
-
-        Arguments:
-        
-        - pos (np.ndarray): 2D numpy array of position vectors of
-                            all persons
-
-        Returns:
-        - a numpy.ndarrray containing the gradient due to interactions
-          between persons
-        """
-        dm = np.linalg.norm(pos[None, :] - pos[:, None], axis=2)
-        res = np.zeros(pos.shape)
-        for i, pos1 in enumerate(pos):
-            if self.persons[i].dead:
-                ## dead persons don't interact with others
-                continue
-            for j, pos2 in enumerate(pos[i+1:], i+1):
-                if self.persons[j].dead:
-                    continue
-                if dm[i,j] < self.max_transmit_distance:
-                    self._maybe_transmit(self.persons[i], self.persons[j], dm[i,j])
-                if dm[i,j] < self.min_distance:
-                    f = (self.min_distance - dm[i,j]) / dm[i,j] * (pos1 - pos2)
-                    res[i] += f
-                    res[j] -= f
-                    
-        return self.force_constant * res
-
-
-    def _integration_step(self, poss, vels):
-        """
-        One single velocity Verlet integration step
-
-        Arguments:
-
-        - poss (np.ndarray): 2D numpy array of position vectors
-        - vels (np.ndarray): 2D numpy array of velocity vectors
-
-        Returns:
-
-        - (poss, vels, new_grad): Updated positions, velocities, and gradient
-        """
-        poss = poss.copy()
-        vels = vels.copy()
-        poss += vels * self.dt + 0.5 * self._oldgrad * self.dt * self.dt
-        new_grad = self.inter_person_gradient(poss) + self.geometry.gradient(poss)
-        vels += 0.5 * (self._oldgrad + new_grad) * self.dt
-
-        return poss, vels, new_grad
-    
-    
     def _move_persons(self):
         """
         Update movement of all persons during one time step
         """
         old_poss = np.array([p.pos for p in self.persons])
         old_vels = np.array([p.vel for p in self.persons])
-        new_poss, new_vels, new_grad = self._integration_step(old_poss,
-                                                              old_vels)
-
-        ## we cache the gradient
-        self._oldgrad = new_grad
-
+        new_poss, new_vels = self.particle_engine.integration_step(old_poss,
+                                                                   old_vels)
         for i, (pos, vel) in enumerate(zip(new_poss, new_vels)):
             self.persons[i].pos = pos
             self.persons[i].vel = vel
