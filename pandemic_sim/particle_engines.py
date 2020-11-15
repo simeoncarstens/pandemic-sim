@@ -180,7 +180,7 @@ class DefaultParticleEngine(AbstractParticleEngine):
                                                  acting between particles
         - geometry_force_constant (float): Force constant determining the
                                            strength of the force confining
-                                           particles to the geometry.                                           
+                                           particles to the geometry.
         - skip_condition (callable): A function taking a a single argument
                                      (the index of a particle) and which,
                                      when returning True, will lead to skipping
@@ -197,7 +197,8 @@ class DefaultParticleEngine(AbstractParticleEngine):
         self.inter_particle_force_constant = inter_particle_force_constant
         self.geometry_force_constant = geometry_force_constant
         self._gradient_list.append(self.inter_particle_gradient)
-        self._gradient_list.append(geometry_gradient)
+        self._gradient_list.append(
+            lambda x: self.geometry_force_constant * geometry_gradient(x))
         self._oldgrad = None
         
     def inter_particle_gradient(self, pos):

@@ -8,29 +8,27 @@ import numpy as np
 
 
 class Person(object):
-    def __init__(self, pos, vel, in_prob, out_prob, death_prob, infected=False,
-                 immune=False):
+    def __init__(self, pos, vel, death_prob,
+                 personal_transmission_model=None,
+                 infected=False, immune=False):
         """
         Make a new person object.
 
         Args:
             pos (np.ndarray): The x/y position vector of the person.
             vel (np.ndarray): The x/y velocity vector of the person.
-            in_prob (float): Probability to get infected in an
-                             encounter with an infected person.
-            out_prob (float): Probability to infect another person in
-                              an encounter.
             death_prob (float): Probability of dying in a single time
                                 step if person is infected.
+            personal_transmission_model: Individual part of disease model
+                                         modeling transmission of disease
             infected (bool): Whether the person is infected or not
             immune (bool): Whether person is immune or not
         """
         self.pos = pos
         self.vel = vel
-        self.in_prob = in_prob
-        self.out_prob = out_prob
         self.infected = infected
         self.immune = immune
+        self.personal_transmission_model = personal_transmission_model
         self.infected_since = None
         self._dead = False
         self.death_prob = death_prob
@@ -53,8 +51,8 @@ class Person(object):
 
 
 class Simulation(object):
-    def __init__(self, geometry, persons, health_system, prob_dist,
-                 max_transmit_distance, particle_engine, time_to_heal):
+    def __init__(self, geometry, persons, health_system, transmission_model,
+                 particle_engine, time_to_heal):
         """
         Arguments:
         
@@ -63,49 +61,32 @@ class Simulation(object):
         - persons (list): A list of persons
         - health_system (HealthSystem): A HealthSystem object which possibly
                                         influences the death probability
-        - prob_dist (callable): A function describing a base probability of
-                                infection depending on the distance between
-                                two persons
-        - max_transmit_distance (float): Maximum distance between two persons
-                                         above which no transmission can happen
+        - transmission_model (AbstractTransmissionModel): Disease model which 
+                                                          models transmission.
         - particle_engine: A ParticleEngine object which is responsible for the
                            physical part of the simulation
         - time_to_heal (int): Number of time steps it takes for a person to
                               become healthy again after they've been infected
         """
         self.geometry = geometry
+        self._check_for_personal_transmission_models(persons)
         self.persons = persons
         self.health_system = health_system
-        self.prob_dist = prob_dist
         self.particle_engine = particle_engine
+        self._transmission_model = transmission_model
         self.particle_engine.skip_condition = lambda i: self.persons[i].dead
-        self.particle_engine.pairwise_hook = self._maybe_transmit
-        self.max_transmit_distance = max_transmit_distance
+
+        def pairwise_hook(i, j, d):
+            return self._transmission_model.maybe_transmit(persons[i], persons[j], d)
+
+        self.particle_engine.pairwise_hook = pairwise_hook
         self.time_to_heal = time_to_heal
         self._current_step = 0
-        
-    
-    def _maybe_transmit(self, p1_index, p2_index, d):
-        """
-        Transmits disease between two persons depending on their distance
-        
-        Arguments:
 
-        - p1 (Person): first person
-        - p2 (Person): second person
-        - d (float): distance between the two persons
-        """
-        p1 = self.persons[p1_index]
-        p2 = self.persons[p2_index]
-        if (p1.infected & (~p2.infected)) or ((~p1.infected) & p2.infected):
-            base_prob = self.prob_dist(d)
-            if p1.infected & ~p2.immune:
-                total_prob = base_prob * p1.out_prob * p2.in_prob
-                p2.infected = np.random.random() < total_prob
-            elif p2.infected & ~p1.immune:
-                total_prob = base_prob * p2.out_prob * p1.in_prob
-                p1.infected = np.random.random() < total_prob
-
+    def _check_for_personal_transmission_models(self, persons):
+        if any((p.personal_transmission_model is None for p in persons)):
+            raise ValueError(("All persons need the 'personal_transmission_model' "
+                              "attribute set"))
 
     def _move_persons(self):
         """
@@ -136,30 +117,64 @@ class Simulation(object):
         n_alive = len(self.persons) - n_dead
 
         return {'n_dead': n_dead, 'n_infected': n_infected, 'n_alive': n_alive}
-           
-            
+
+
+    def _possibly_kill_person(self, p, population_state):
+        """
+        Kills a person with a certain probability based on the population
+        macrostate. Returns a  boolean indicating whether the person has been
+        killed or not.
+        """
+        death_prob = self.health_system.calculate_death_probability_factor(
+            population_state)
+        death_prob *= p.death_prob
+        if np.random.random() < death_prob:
+            p.dead = True
+            return True
+        else:
+            return False
+
+
+    def _possibly_cure_person(self, p):
+        """
+        Possibly cures a person based on the time they have been infected and
+        the time it takes to heal and become immune. Returns a boolean
+        indicating whether the person has been cured or not.
+        """
+        if self._current_step - p.infected_since >= self.time_to_heal:
+            p.infected = False
+            p.immune = True
+            return True
+        else:
+            return False
+
+
+    def _evolve_person_disease_states(self):
+        """
+        Evolves the disease status of all persons. That currently comprises
+        the random events of death and being cured.
+        """
+        population_state = self._calculate_population_state()
+        for p in self.persons:
+            if p.infected:
+                if p.infected_since is None:
+                    # person is freshly infected, thus set time stamp
+                    p.infected_since = self._current_step
+                else:
+                    # person has been infected in previous simulation step
+                    person_cured = self._possibly_cure_person(p)
+                    if not person_cured:
+                        self._possibly_kill_person(p, population_state)
+
+
     def step(self):
         """
         Advance the simulation by one time step.
         """
         self._move_persons()
-
-        population_state = self._calculate_population_state()
-        for p in self.persons:
-            if p.infected:
-                if p.infected_since is None:
-                    p.infected_since = self._current_step
-                elif self._current_step - p.infected_since >= self.time_to_heal:
-                    p.infected = False
-                    p.immune = True
-                else:
-                    death_prob = self.health_system.calculate_death_probability_factor(
-                        population_state)
-                    death_prob *= p.death_prob
-                    if np.random.random() < death_prob:
-                        p.dead = True
+        self._evolve_person_disease_states()
         self._current_step += 1
-                    
+
 
     def run(self, n_steps):
         all_positions = [np.array([p.pos for p in self.persons])]

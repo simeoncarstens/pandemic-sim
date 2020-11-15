@@ -8,19 +8,10 @@ import numpy as np
 
 
 class Geometry(metaclass=ABCMeta):
-    def __init__(self, force_constant):
+    def __init__(self):
         """
         A class defining the geometry of the space the persons move in.
-
-        Arguments:
-
-        - force_constant (float): Force constant determining strength of 
-                                  the interaction potential between a 
-                                  person and the walls
-                                  The higher it is, the stronger a person
-                                  bounces off a wall.
         """
-        self.force_constant = force_constant
 
 
     @abstractmethod
@@ -61,7 +52,7 @@ class Geometry(metaclass=ABCMeta):
 
     
 class RectangleGeometry(Geometry):
-    def __init__(self, width, height, force_constant):
+    def __init__(self, width, height):
         """
         A rectangular geometry.
 
@@ -70,10 +61,9 @@ class RectangleGeometry(Geometry):
         - width (float): the width of the rectangle
         - height (float): the height of the rectangle
         """
+        super().__init__()
         self.width = width
         self.height = height
-        
-        super().__init__(force_constant)
 
 
     def gradient(self, pos):
@@ -104,7 +94,7 @@ class RectangleGeometry(Geometry):
         cond = pos[:,0] < 0.0
         res[cond, 0] -= pos[cond, 0]
 
-        return self.force_constant * res
+        return res
 
 
     def get_random_position(self):
