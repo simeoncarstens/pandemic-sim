@@ -5,6 +5,7 @@ from pandemic_sim.geometries import RectangleGeometry
 from pandemic_sim.health_systems import SimpleHealthSystem
 from pandemic_sim.particle_engines import (DefaultParticleEngine,
                                            VelocityVerletIntegrator)
+from pandemic_sim.transmission_models import DefaultTransmissionModel
 from pandemic_sim.visualizations import (DefaultVisualization,
                                          DefaultPersonsDrawer,
                                          RectangleGeometryDrawer,
@@ -14,11 +15,14 @@ from pandemic_sim.animators import CelluloidAnimator
 
 ## Initialize simulation
 n_persons = 200
-room = RectangleGeometry(25, 25, force_constant=20.0)
+room = RectangleGeometry(25, 25)
 
-# base probability of transmission during one timestep of an encounter between
-# two persons
-base_prob = 0.00015
+# Set up transmission model, which models how the disease is transmitted
+# upon an encounter of two persons
+transmission_model = DefaultTransmissionModel(lambda d: d < 1)
+
+# probability of dying during a timestep
+death_prob = 0.00015
 # reduce outgoing probability by 95%; meaning that a person is less likely to
 # spread the virus in its environment. This emulates efficient filtering of
 # breathed-out air.
@@ -34,9 +38,11 @@ initial_positions = room.get_random_position_set(n_persons)
 persons = [Person(pos,
                   np.random.uniform(low=(-max_vel, -max_vel),
                                     high=(max_vel, max_vel), size=2),
-                  in_prob, out_prob,
-                  base_prob, False)
+                  death_prob, personal_transmission_model=None, immune=False)
            for pos in initial_positions]
+for p in persons:
+    p.personal_transmission_model = transmission_model.personal_tm_factory(
+        p, in_prob=in_prob, out_prob=out_prob)
 # some persons actually start out being infected
 chosen_ones = np.random.choice(np.arange(n_persons), n_persons // 50)
 for i in chosen_ones:
@@ -55,9 +61,8 @@ pe = DefaultParticleEngine(cutoff=0.75, geometry_gradient=room.gradient,
                            geometry_force_constant=20.0)
 
 # Set up simulation object
-sim = Simulation(room, persons, health_system, lambda d:  d < 1,
-                 max_transmit_distance=3, particle_engine=pe,
-                 time_to_heal=150)
+sim = Simulation(room, persons, health_system, transmission_model,
+                 particle_engine=pe, time_to_heal=150)
 n_steps = 800
 sim_result = sim.run(n_steps)
 

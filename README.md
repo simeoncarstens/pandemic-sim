@@ -8,19 +8,20 @@ It works as follows: people wander around in a room and upon contact can infect 
 
 ### Persons
 - number of persons
-- probability to catch the disease
-- probability to expose others
 - time it takes for people to become healthy again after infection
-- probability of a person to die in a certain simulation time step, given they are infected
 - minimal distance people maintain to each other
 - initial infection status
 
-### Disease
+### Disease transmission model
 - base probability for infection depending on distance between persons
-- time it takes to heal once a person is infected
-- maximum distance below which the disease can be transmitted
+- probability to catch the disease
+- probability to expose others
 
-### Numerical parameters
+### Disease
+- time it takes to heal once a person is infected
+- probability of a person to die in a certain simulation time step, given they are infected
+
+### Numerical / physical parameters
 - integration time step
 - strength of repulsive forces pushing persons away from each other and from walls
 
