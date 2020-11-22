@@ -14,15 +14,16 @@ class Person(object):
         """
         Make a new person object.
 
-        Args:
-            pos (np.ndarray): The x/y position vector of the person.
-            vel (np.ndarray): The x/y velocity vector of the person.
-            personal_disease_model: disease model which calculates death
-                                    and cure probabilities
-            personal_transmission_model: Individual part of disease model
-                                         modeling transmission of disease
-            infected (bool): Whether the person is infected or not
-            immune (bool): Whether person is immune or not
+        Arguments:
+        
+        - pos (np.ndarray): The x/y position vector of the person.
+        - vel (np.ndarray): The x/y velocity vector of the person.
+        - personal_disease_model: disease model which calculates death
+                                  and cure probabilities
+        - personal_transmission_model: Individual part of disease model
+                                       modeling transmission of disease
+        - infected (bool): Whether the person is infected or not
+        - immune (bool): Whether person is immune or not
         """
         self.pos = pos
         self.vel = vel
