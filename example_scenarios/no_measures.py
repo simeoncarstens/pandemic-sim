@@ -32,7 +32,8 @@ max_vel = 2
 persons = [Person(pos,
                   np.random.uniform(low=(-max_vel, -max_vel),
                                     high=(max_vel, max_vel), size=2),
-                  death_prob, personal_transmission_model=None, immune=False)
+                  personal_disease_model=None,
+                  personal_transmission_model=None, immune=False)
            for pos in initial_positions]
 # Add individual parts of transmission model to persons
 for p in persons:

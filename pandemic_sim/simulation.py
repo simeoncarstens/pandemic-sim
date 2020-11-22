@@ -101,10 +101,12 @@ class Simulation(object):
         old_vels = np.array([p.vel for p in self.persons])
         new_poss, new_vels = self.particle_engine.integration_step(old_poss,
                                                                    old_vels)
-        for i, (pos, vel) in enumerate(zip(new_poss, new_vels)):
-            self.persons[i].pos = pos
-            self.persons[i].vel = vel
-        
+        for (p, pos, vel) in zip(self.persons, new_poss, new_vels):
+            p.pos = pos
+            # sanitize velocities of dead people: the old gradient in the
+            # integrator does not get updated when a person dies, so they
+            # will have a non-zero velocity 
+            p.vel = vel if not p.dead else np.array([0, 0])
 
     def _update_population_state(self):
         """
@@ -168,7 +170,6 @@ class Simulation(object):
         Evolves the disease status of all persons. That currently comprises
         the random events of death and being cured.
         """
-        self._update_population_state()
         for p in self.persons:
             if p.infected:
                 if p.infected_since is None:
@@ -179,6 +180,7 @@ class Simulation(object):
                     person_cured = self._possibly_cure_person(p)
                     if not person_cured:
                         self._possibly_kill_person(p, self.population_state)
+        self._update_population_state()
 
 
     def step(self):
