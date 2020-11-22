@@ -7,16 +7,35 @@ infected people.
 from abc import ABCMeta, abstractmethod
 
 
-class HealthSystem(metaclass=ABCMeta):
+class AbstractHealthSystem(metaclass=ABCMeta):
     @abstractmethod
     def calculate_death_probability_factor(self, population_state):
         """
-        Calculates a factor which depends on the populaton macrostate
-        (number of infected persons, number of total persons) and by
-        which in a simulation the death probability is multiplied
+        In general, the probability of a person dying during one simulaton
+        step might depend on that person, the current simulation time, and
+        the population state.
 
         Arguments:
 
+        - p (Person): the person the cure probability is calculated for
+        - time (int): the current simulation time
+        - population_state (dict): dictionary of quantities defining the overall
+                                   state of the population (number of infected
+                                   persons, number of total persons)
+        """
+        pass
+
+    @abstractmethod
+    def calculate_cure_probability_factor(self, p, time, population_state):
+        """
+        In general, the probability of a person being cured during one 
+        simulation step might depend on that person, the current simulation
+        time, and the population state.
+
+        Arguments:
+
+        - p (Person): the person the cure probability is calculated for
+        - time (int): the current simulation time
         - population_state (dict): dictionary of quantities defining the overall
                                    state of the population (number of infected
                                    persons, number of total persons)
@@ -24,16 +43,23 @@ class HealthSystem(metaclass=ABCMeta):
         pass
 
 
-class NoEffectHealthSystem(HealthSystem):
-    def calculate_death_probability_factor(self, _):
+class NoEffectHealthSystem(AbstractHealthSystem):
+    def calculate_death_probability_factor(self, _, __, ___):
         """
-        Returns a factor of 1.0 indepent from the population state.
+        This health system doesn't influence the death probability, so this
+        always returns 1.0
         """
+        return 1.0
 
+    def calculate_cure_probability_factor(self, _, __, ___):
+        """
+        This health system doesn't influence the cure probability, so this
+        returns 1.0
+        """
         return 1.0
 
     
-class SimpleHealthSystem(HealthSystem):
+class SimpleHealthSystem(AbstractHealthSystem):
     def __init__(self, threshold, death_probability_factor):
         """
         Simple health system which simulates limited capacity by increasing
@@ -51,7 +77,7 @@ class SimpleHealthSystem(HealthSystem):
         self.death_probability_factor = death_probability_factor
 
         
-    def calculate_death_probability_factor(self, population_state):
+    def calculate_death_probability_factor(self, _, __, population_state):
         """
         Returns the death probability factor if number of infected people
         exceeds a certain threshold, else returns 1.0
@@ -68,3 +94,10 @@ class SimpleHealthSystem(HealthSystem):
             return self.death_probability_factor
         else:
             return 1.0
+
+    def calculate_cure_probability_factor(self, _, __, ___):
+        """
+        This health system doesn't influence the cure probability, so this
+        returns 1.0
+        """
+        return 1.0
