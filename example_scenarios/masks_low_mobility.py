@@ -6,6 +6,7 @@ from pandemic_sim.health_systems import SimpleHealthSystem
 from pandemic_sim.particle_engines import (DefaultParticleEngine,
                                            VelocityVerletIntegrator)
 from pandemic_sim.transmission_models import DefaultTransmissionModel
+from pandemic_sim.disease_models import DefaultPersonalDiseaseModel
 from pandemic_sim.visualizations import (DefaultVisualization,
                                          DefaultPersonsDrawer,
                                          RectangleGeometryDrawer,
@@ -23,6 +24,8 @@ transmission_model = DefaultTransmissionModel(lambda d: d < 1)
 
 # probability of dying during a timestep
 death_prob = 0.00015
+# duration of a person's infection (in units of simulation time steps)
+time_to_heal = 150
 # reduce outgoing probability by 95%; meaning that a person is less likely to
 # spread the virus in its environment. This emulates efficient filtering of
 # breathed-out air.
@@ -43,6 +46,8 @@ persons = [Person(pos,
 for p in persons:
     p.personal_transmission_model = transmission_model.personal_tm_factory(
         p, in_prob=in_prob, out_prob=out_prob)
+    p.personal_disease_model = DefaultPersonalDiseaseModel(p, death_prob,
+                                                           time_to_heal)
 # some persons actually start out being infected
 chosen_ones = np.random.choice(np.arange(n_persons), n_persons // 50)
 for i in chosen_ones:
@@ -62,7 +67,7 @@ pe = DefaultParticleEngine(cutoff=0.75, geometry_gradient=room.gradient,
 
 # Set up simulation object
 sim = Simulation(room, persons, health_system, transmission_model,
-                 particle_engine=pe, time_to_heal=150)
+                 particle_engine=pe)
 n_steps = 800
 sim_result = sim.run(n_steps)
 

@@ -8,7 +8,7 @@ import numpy as np
 
 
 class Person(object):
-    def __init__(self, pos, vel, death_prob,
+    def __init__(self, pos, vel, personal_disease_model,
                  personal_transmission_model=None,
                  infected=False, immune=False):
         """
@@ -17,8 +17,8 @@ class Person(object):
         Args:
             pos (np.ndarray): The x/y position vector of the person.
             vel (np.ndarray): The x/y velocity vector of the person.
-            death_prob (float): Probability of dying in a single time
-                                step if person is infected.
+            personal_disease_model: disease model which calculates death
+                                    and cure probabilities
             personal_transmission_model: Individual part of disease model
                                          modeling transmission of disease
             infected (bool): Whether the person is infected or not
@@ -28,10 +28,10 @@ class Person(object):
         self.vel = vel
         self.infected = infected
         self.immune = immune
+        self.personal_disease_model = personal_disease_model
         self.personal_transmission_model = personal_transmission_model
         self.infected_since = None
         self._dead = False
-        self.death_prob = death_prob
 
     @property
     def dead(self):
@@ -52,7 +52,7 @@ class Person(object):
 
 class Simulation(object):
     def __init__(self, geometry, persons, health_system, transmission_model,
-                 particle_engine, time_to_heal):
+                 particle_engine):
         """
         Arguments:
         
@@ -65,11 +65,9 @@ class Simulation(object):
                                                           models transmission.
         - particle_engine: A ParticleEngine object which is responsible for the
                            physical part of the simulation
-        - time_to_heal (int): Number of time steps it takes for a person to
-                              become healthy again after they've been infected
         """
         self.geometry = geometry
-        self._check_for_personal_transmission_models(persons)
+        self._check_for_personal_models(persons)
         self.persons = persons
         self.health_system = health_system
         self.particle_engine = particle_engine
@@ -80,14 +78,21 @@ class Simulation(object):
             return self._transmission_model.maybe_transmit(persons[i], persons[j], d)
 
         self.particle_engine.pairwise_hook = pairwise_hook
-        self.time_to_heal = time_to_heal
         self._current_step = 0
+        self._update_population_state()
 
-    def _check_for_personal_transmission_models(self, persons):
+    @property
+    def population_state(self):
+        return self._population_state.copy()
+        
+    def _check_for_personal_models(self, persons):
         if any((p.personal_transmission_model is None for p in persons)):
             raise ValueError(("All persons need the 'personal_transmission_model' "
                               "attribute set"))
-
+        if any((p.personal_disease_model is None for p in persons)):
+            raise ValueError(("All persons need the 'personal_disease_model' "
+                              "attribute set"))
+        
     def _move_persons(self):
         """
         Update movement of all persons during one time step
@@ -101,7 +106,7 @@ class Simulation(object):
             self.persons[i].vel = vel
         
 
-    def _calculate_population_state(self):
+    def _update_population_state(self):
         """
         Calculates overall quantities characterizing the state of the population:
         number of dead people, number of infected people, number of alive people
@@ -116,7 +121,8 @@ class Simulation(object):
         n_infected = microstates[:,1].sum()
         n_alive = len(self.persons) - n_dead
 
-        return {'n_dead': n_dead, 'n_infected': n_infected, 'n_alive': n_alive}
+        self._population_state = {'n_dead': n_dead, 'n_infected': n_infected,
+                                  'n_alive': n_alive}
 
 
     def _possibly_kill_person(self, p, population_state):
@@ -125,10 +131,12 @@ class Simulation(object):
         macrostate. Returns a  boolean indicating whether the person has been
         killed or not.
         """
-        death_prob = self.health_system.calculate_death_probability_factor(
-            population_state)
-        death_prob *= p.death_prob
-        if np.random.random() < death_prob:
+        hs_death_prob = self.health_system.calculate_death_probability_factor(
+            p, self._current_step, population_state)
+        personal_death_prob = (
+            p.personal_disease_model.calculate_death_probability_factor(
+                self._current_step))
+        if np.random.random() < hs_death_prob * personal_death_prob:
             p.dead = True
             return True
         else:
@@ -141,7 +149,13 @@ class Simulation(object):
         the time it takes to heal and become immune. Returns a boolean
         indicating whether the person has been cured or not.
         """
-        if self._current_step - p.infected_since >= self.time_to_heal:
+        personal_cure_prob = (
+            p.personal_disease_model.calculate_cure_probability_factor(
+                self._current_step))
+        hs_cure_prob = self.health_system.calculate_cure_probability_factor(
+            p, self._current_step, self.population_state)
+        
+        if np.random.random() < personal_cure_prob * hs_cure_prob:
             p.infected = False
             p.immune = True
             return True
@@ -154,7 +168,7 @@ class Simulation(object):
         Evolves the disease status of all persons. That currently comprises
         the random events of death and being cured.
         """
-        population_state = self._calculate_population_state()
+        self._update_population_state()
         for p in self.persons:
             if p.infected:
                 if p.infected_since is None:
@@ -164,7 +178,7 @@ class Simulation(object):
                     # person has been infected in previous simulation step
                     person_cured = self._possibly_cure_person(p)
                     if not person_cured:
-                        self._possibly_kill_person(p, population_state)
+                        self._possibly_kill_person(p, self.population_state)
 
 
     def step(self):

@@ -164,7 +164,8 @@ class AbstractTransmissionModel(metaclass=ABCMeta):
         - distance (float): distance between the two persons
         """
         if not (person1.immune and person2.immune
-                or person1.infected and person2.infected):
+                or person1.infected and person2.infected
+                or person1.dead or person2.dead):
             pairwise_results = self.global_tm.calculate_pairwise_results(
                 person1, person2, distance)
             p1_tm = person1.personal_transmission_model
@@ -179,7 +180,7 @@ class AbstractTransmissionModel(metaclass=ABCMeta):
                     pairwise_results,
                     p2_tm.calculate_exposure_results(),
                     p1_tm.calculate_susceptibility_results())
-        
+
     @abstractmethod
     def _combine_results(self, pairwise_results, exposure_result,
                          susceptibility_result):
