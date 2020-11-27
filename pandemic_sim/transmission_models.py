@@ -174,7 +174,7 @@ class AbstractTransmissionModel(metaclass=ABCMeta):
                     pairwise_results,
                     p1_tm.calculate_exposure_results(),
                     p2_tm.calculate_susceptibility_results())
-            else:
+            elif person2.infected:
                 person1.infected = self._combine_results(
                     pairwise_results,
                     p2_tm.calculate_exposure_results(),
