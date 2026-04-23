@@ -1,4 +1,4 @@
-{ pkgs ? import <nixpkgs> {} }:
+{ pkgs ? import (fetchTarball https://github.com/NixOS/nixpkgs/archive/refs/tags/20.03.tar.gz) {}}:
 
 with pkgs;
 with pkgs.python36Packages;
